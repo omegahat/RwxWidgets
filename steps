@@ -1,0 +1,9 @@
+
+Create widgets
+  app
+  button
+
+Connect R function as an event handler
+
+Put the event handler on the R event loop.
+

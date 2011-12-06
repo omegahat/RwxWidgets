@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1></h1>
+
+<init>
+x = 1
+</init>
+
+The idea here is that we specify a GUI element
+with different details in sub-tags and some
+details as attributes.
+For our example, we are interested not in the
+GUI component but in parsing the HTML sub-tags.
+
+<spinctrl editable="FALSE">
+ <init>obj$SetValue("bob")</init> <!--  -->
+ <callback>plot(1:10)</callback> <!--  -->
+</spinctrl>
+
+
+
+
+So how do we get the sub-elements
+and how can we use them to create the component.
+
+<hr width="50%">
+Not this!
+<spinctrl editable="FALSE">
+#init
+obj$SetValue("bob")
+#callback
+plot(1:10)
+</spinctrl>
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Sun Dec  3 13:59:05 PST 2006
+<!-- hhmts end -->
+</body> </html>

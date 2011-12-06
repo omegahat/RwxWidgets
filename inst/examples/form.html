@@ -1,0 +1,133 @@
+<html> <head>
+<title>A Sample Form</title>
+</head>
+
+<body>
+<h1>A sample form in RwxWidgets</h1>
+
+This is a test of x<sup>2</sup> and x<sub>i</sub>.
+These are implemented in 2.7.0.
+
+<p>
+
+This should relatively straightforward form.  Note that the radio
+buttons currently appear as checkboxes but they are mutually
+exclusive.  This is because in an HTML widget, the radio buttons
+within a group do not necessarily appear in the document sequentially.
+As a result, there are issues with the wxWidget's radio button model
+that uses a "global" variable to identify groups sequentially
+at creation.
+
+<p>
+<form name="testing" method="GET" action="http://www.omegahat.org/cgi_bin/dummy">
+ <input type="button" name="bob" value="Hit me">
+<table>
+<tr>
+<th>  
+<p>
+A <input type="radio" name="rad" value="A" checked="true">
+<br>
+B <input type="radio" name="rad" value="B">
+<br>
+C <input type="radio" name="rad" value="C">
+<p>
+</th>
+<th>
+Dog <input type="radio" name="pet" value="Dog">
+Cat <input type="radio" name="pet" value="Cat" checked>
+</th>
+<th>
+Select all that apply
+
+1<input type="checkbox" name="num" value="1" checked="true">
+2<input type="checkbox" name="num" value="2">
+3<input type="checkbox" name="num" value="3" checked="">
+</th>
+</tr>
+</table>
+
+<input type="hidden"  name="invisibleParam" value="42"/>
+
+Pick a file: <input type="file" name="infile">
+
+<p/>
+Provide a password to access the file: <input type="password" name="passwd">
+<p/>
+
+<textarea rows="5" cols=70 name="freeText">
+Some sample text
+</textarea>
+
+<p>
+
+Choose one of the following:
+<select name="fruit">
+  <option selected="true">Apple</option>
+  <option>Orange</option>
+  <option value="yellow" selected="true">Banana</option>
+</select>
+<p>
+Note that at present, it is essential that you close the
+option tags for us to be able to correctly determine the text.
+<br>
+
+
+<p>
+<hr width="50%">
+ <input type="submit" value="Send">
+ <input type="Reset" value="Reset">
+</form>
+
+<h2>A second form</h2>
+This is an example to test the code when we have two forms.
+By design, there are elements in this form that are the same
+as in the form above to test whether we are keeping them
+separate.
+<form name="second">
+A <input type="radio" name="rad" value="A" checked="true">
+<br>
+B <input type="radio" name="rad" value="B">
+<br>
+C <input type="radio" name="rad" value="CA">
+<p>
+<input type="Submit">
+</form>
+
+<p>
+With 2.6.3 and R 2.4 development, it currently doesn't show the
+contents of the form.
+And we get error dialog messages about the encoding.
+
+<h2>An image</h2>
+
+JPEG: <img src="balls.jpg">
+<p>
+PNG: <img src="pic.png">
+<p>
+BMP: <img src="pic2.bmp">
+
+<p>
+Note that the wxInitAllImageHandlers() method is now called
+when the wxWidgets application is initialized,
+i.e. the call
+to
+<code>.Call("R_wxWidgets_init", "Rwx")</code>
+
+<h3>A Link</h3>
+
+<a href="#internalLink">internal link</a>
+
+<p>
+
+<OBJECT type="app/x-R-widget" width="200" HEIGHT="400">
+ <param name="call" value="showDataGrid(mtcars, wxHtmlParser_GetWindow(parser))">
+</OBJECT>
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Sat Mar 10 09:45:11 PST 2007
+<!-- hhmts end -->
+</body> </html>

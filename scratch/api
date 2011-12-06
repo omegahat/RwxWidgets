@@ -1,0 +1,6 @@
+#!/bin/sh
+
+echo "#include <wx/$1.h>" > $1.cpp 
+g++-3.3 `wx-config --cflags` -c -fdump-translation-unit $1.cpp 
+
+#perl flattenxml.pl test.cpp.tu > api.xml 

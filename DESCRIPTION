@@ -1,0 +1,12 @@
+Package: RwxWidgets
+Version: 0.5-7
+Title: Interface to wxWidgets
+Description: Facilities to program GUIs using wxWidgets in R
+Author: Duncan Temple Lang 
+Depends: bitops
+SystemRequirements: wxWidgets-2.8.*
+Maintainer: Duncan Temple Lang <duncan@wald.ucdavis.edu>
+License: GPL
+LazyLoading: yes
+LazyLoad: yes
+

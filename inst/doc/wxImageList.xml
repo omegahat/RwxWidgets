@@ -1,0 +1,138 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://www.omegahat.org/XSL/Rstyle.xsl" ?>
+
+<article  xmlns:r="http://www.r-project.org"
+	  xmlns:cpp="http://www.cplusplus.org"
+	  xmlns:xi="http://www.w3.org/2001/XInclude">
+<articleinfo>
+<author>
+   <firstname>Duncan</firstname><surname>Temple Lang</surname>
+   <affiliation>Dept. of Statistics, UC Davis</affiliation>
+</author>
+</articleinfo>
+
+<section>
+<title>Using the wxImageList.</title>
+<para>
+In this article we aim to show how to use the wxImageList in
+combination with some of the widgets such as wxListCtrl.
+The result is
+<graphic fileref="wxImageList.jpg"/>
+</para>
+
+<para>We start by initializing the R session for 
+use with RwxWidgets.
+<r:init>
+library(RwxWidgets)
+wxInit()
+
+wxNullBitmap = getWxNullBitmap()
+</r:init>
+</para>
+
+<para>
+Next, we load several images.
+We use the three icons of the same size in the R distribution.
+
+<!-- allow xmlSource() provide a replacement for this entry matching 'id'. -->
+<r:code id="populateImageList">
+imageNames = list.files(paste(Sys.getenv("R_HOME"), "doc", "html", sep = .Platform$file.sep), 
+                         "(left|right|up)\\.jpg$", full.names = TRUE)
+imageType = wxBITMAP_TYPE_JPEG
+</r:code>
+
+<ignore>
+<r:code eval="false">
+imageNames = list.files("~/pal2", full.names = TRUE)[1:3] #XXX
+imageType = wxBITMAP_TYPE_PNG
+</r:code>
+</ignore>
+</para>
+
+
+<para>
+Now, we create the image list and load these images and insert them into the list.
+<r:code>
+images = wxImageList()
+sapply(imageNames, function(filename) images$Add(wxBitmap(filename, imageType)))
+</r:code>
+</para>
+
+<para>
+<r:code>
+imageNames = c(imageNames, "down")
+tmp = as(images[[3]], "wxImage")$Rotate(pi, c(20, 20))
+tmp = tmp$Rescale(images[[3]]$GetWidth(), images[[3]]$GetHeight())
+down = as(tmp, "wxBitmap")
+images$Add(down)
+</r:code>
+</para>
+
+<para>
+At this point, we can use the images in a GUI.
+So we create a top-level window and a wxListCtrl
+and then associate the wxImageList
+with this widget. Note that we use SetImageList
+and so we continue to own and manage the image list.
+<r:code>
+f = RFrame("wxImageList Example", size = c(600, 300))
+</r:code>
+
+<ignore>
+<r:code eval="false">
+sz = wxBoxSizer(wxHORIZONTAL)
+sz$SetSizeHints(f)
+f$SetSizer(sz)
+
+li = wxListCtrl(f) # , size = c(200, 300))
+book = wxNotebook(f, size = c(400, 300))
+
+sz$Add(li, 0, wxALL)
+sz$Add(book, 1, wxEXPAND)
+</r:code>
+</ignore>
+
+<r:code>
+win = wxSplitterWindow(f, wxID_ANY)
+li = wxListCtrl(win) 
+book = wxNotebook(win, size = c(400, 300))
+win$SplitVertically(li, book)
+</r:code>
+
+</para>
+
+<para>
+And now we add entries to the wxListCtrl.
+We put the name of each image and associate it with that image.
+<r:code>
+li$SetImageList(images, wxIMAGE_LIST_NORMAL)
+sapply(seq(along = imageNames),
+        function(i) {
+	    li$InsertItem(i - 1, basename(imageNames[i]), i-1)
+        })
+</r:code>
+</para>
+
+<para>
+<r:code>
+book$SetImageList(images)
+sapply(seq(along = imageNames),
+        function(i) {
+	    book$AddPage(wxPanel(book), basename(imageNames[i]), FALSE, i-1)
+        })
+</r:code>
+</para>
+
+<para>
+And finally we display the top-level window and run the event loop.
+<r:code>
+f$Show()
+eloop = wxEventLoop()
+wxEventLoop_Run(eloop)
+</r:code>
+</para>
+</section>
+
+
+
+</article>

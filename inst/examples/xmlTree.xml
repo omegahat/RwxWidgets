@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://www.omegahat.org/XSL/Rstyle.xsl" ?>
+
+<article xmlns:r='http://www.r-project.org'>   
+<articleinfo>
+<author><firstname>Duncan</firstname><surname>Temple Lang</surname></author>
+</articleinfo>
+
+
+<section>
+<title>Using wxTreeCtrl to illustrate an XML document.</title>
+<para>
+In this example, we show how to display the structure of
+this XML document in a wxTreeCtrl widget.
+</para>
+
+<para>
+We start by loading the RwxWidgets package.
+<r:code>
+library(RwxWidgets)
+wxInit()
+wxTR_HAS_BUTTONS = 0x0001
+</r:code>
+</para>
+
+
+<para>
+Next, we create the top-level window.
+<r:code>
+f = RFrame("XML Tree example", size = c(300, 300))
+sz = wxBoxSizer(wxVERTICAL)
+f$SetSizer(sz)
+sz$SetSizeHints(f)
+
+sz$SetMinSize(300, 300)
+</r:code>
+</para>
+
+<para>
+And now we start with the wxTreeCtrl. We
+create the top-level widget in this display.
+<r:code>
+tree = wxTreeCtrl(f, wxID_ANY)
+</r:code>
+And we get the XML tree with
+<r:code>
+doc = xmlRoot(xmlTreeParse("xmlTree.xml"))
+top = tree$AddRoot(xmlName(doc))
+</r:code>
+Now, for each child, we add an item
+and then process its children.
+Since this is recursive, we will define a function
+<r:function>
+do =
+function(node, parent, tree) {
+  el = tree$AppendItem(parent, xmlName(node, full = TRUE))
+#  tree$Expand(el)
+#  cat("[do]", tree$GetItemText(el), "\n")
+  ans = xmlSApply(node, do, el, tree)
+  names(ans) = names(node)
+  c(el, ans)
+}
+</r:function>
+
+Now we invoke this function
+<r:code>
+els = c(top, xmlSApply(doc, do, top, tree))
+#print(unlist(els))
+#sapply(unlist(els), function(x) { tree$Expand(x)})
+</r:code>
+</para>
+
+<para>
+Here we register callbacks from some events
+in the tree such as expand and collapse events
+Note that we use the prefix xEVT_COMMAND_TREE
+to identify the events rather than
+wxEVT_TREE which one might infer from the documentation.
+<r:code>
+h =
+function(ev, type) {
+   i = ev$GetItem()
+   cat("wxTreeCtrl event:", type, "\n")
+   print(i)
+   print(tree$GetItemText(i))
+  
+}
+tree$AddCallback(wxEVT_COMMAND_TREE_ITEM_EXPANDED, h, "expanded")
+tree$AddCallback(wxEVT_COMMAND_TREE_ITEM_COLLAPSED, h, "collapsed")
+</r:code>
+</para>
+
+<para>
+<r:code>
+sz$Add(tree, 1, wxEXPAND)
+btn = wxButton(f, wxID_ANY, "Expand")
+sz$Add(btn, 0)
+
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED,
+                 function(ev) {
+
+el = unlist(els)[[1]]
+print(el$IsOk())
+print(tree$GetItemText(el))
+tree$Expand(top)
+#  sapply(unlist(els), function(x) { tree$Expand(x)})
+                 }
+               )
+
+f$Show()
+</r:code>
+
+
+<r:code eval="false">
+eloop = wxEventLoop()
+eloop$Run()
+</r:code>
+
+
+</para>
+</section>
+</article>

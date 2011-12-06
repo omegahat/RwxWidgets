@@ -1,0 +1,38 @@
+library(RGCCTranslationUnit); wx = parseTU("wx.cpp.tu")
+topfiles = list.files("/usr/local/include/wx-2.6/wx", recursive = TRUE)
+targets = gsub("\\.[^\\.]+$", "", topfiles)
+targets = gsub(".+/", "", targets)
+wxClasses = getClassNodes(wx, targets)
+
+
+m = getClassMethods(wx[[ wxClasses$wxBitmapBase ]]) 
+mm = resolveType( m[[24]], wx)
+pp = createMethodBinding(mm,  "wxBitmapBase", nodes = wx)
+cat(pp$native, "\n")
+
+
+generateClassBindings("wxKeyEvent", wx, wxClasses)
+
+generateClassBindings("wxListEvent", wx, wxClasses)
+
+
+generateClassBindings("wxEvent", wx, wxClasses)
+
+
+
+# Generate lots of classes
+
+invisible(sapply(names(wxClasses)[grep("Event$", names(wxClasses))], function(i)  {cat(i, "\n"); invisible(generateClassBindings(i, wx, wxClasses))}))
+invisible(sapply(c("wxRect", "wxPoint", "wxSize"), function(i)  {cat(i, "\n"); invisible(generateClassBindings(i, wx, wxClasses))}))
+
+# Can compile and load assuming RConverters.c.
+#      R CMD SHLIB *.cpp *.c
+
+
+invisible(sapply(c("wxColour", "wxFont", "wxPen", "wxCursor", "wxBrush", "wxBitmap"), function(i)  {cat(i, "\n"); invisible(generateClassBindings(i, wx, wxClasses))}))
+
+
+
+options(error = NULL)
+o = invisible(sapply(sort(names(wxClasses)[-394]), function(i) try({cat(i, "\n"); invisible(generateClassBindings(i, wx, wxClasses)); i})))
+options(error = recover)

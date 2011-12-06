@@ -1,0 +1,70 @@
+useDynLib(RwxWidgets)
+
+export(RApp, RFrame)
+export(Size, Point)
+export(getWxClassInfo)
+
+
+export(wxHtmlWindow, wxHtmlWindow_SetPage, wxHtmlWindow_LoadPage, wxHtmlWindow_SetRelatedFrame,
+       wxHtmlWindow_AddTagHandler, wxHtmlWindow_GetParser,
+       RwxHtmlWinTagHandler, RwxHtmlWinTagHandler_new)
+
+export(wxHtmlTag_GetName, wxHtmlTag_GetAllParams, wxHtmlTag_GetParam, wxHtmlTag_GetParent)
+
+exportClass(RwxObject, RwxApp, RwxFrame, RwxStatusBar, RwxButton, wxBoxSizer,
+             RwxEventHandler, wxGrid, wxWidget, wxStatusBar)
+
+exportClass(wxHtmlWindow, RwxHtmlWindow)
+exportClass(wxHtmlLinkInfo)
+exportClass(wxHtmlTag)
+exportClass(wxHtmlParser)
+
+export(tagHandler)
+
+exportClass(wxHtmlContainerCell, wxHtmlWidgetCell)
+
+
+exportClass(wxHtmlWinParser)
+exportClass(RwxHtmlWinTagHandler)
+
+# Grid
+export("colnames<-", "rownames<-")
+exportMethods("colnames<-", "rownames<-")
+export(setWxGridColNames, setWxGridRowNames)
+export(wxGrid, wxCreateGrid)# , wxSetColLabelValue, wxSetRowLabelValue)
+
+exportPattern("wxHtml.*")
+exportPattern("wxTextCtrl.*")
+exportPattern("wxNotebook.*")
+
+export(wxEventLoop)
+
+# Higher-level utility functions.
+export(htmlViewer, showDataGrid, createHtmlViewer)
+
+export(htmlFormTagHandlers, htmlParserObjectHandler, htmlTagHandlers,
+        defaultObjectHandlers, htmlParserObjectHandler)
+
+exportClass(wxTextCtrl, wxNotebook)
+
+export(wxWindow_Show)
+
+#export(SetSize)
+#exportMethods(SetSize)
+
+exportClass(wxSizer, wxGridSizer, wxFlexGridSizer, wxGridBagSizer)
+
+exportPattern(".*")
+exportClass("HTMLForm", "PostForm", "GetForm")
+
+exportClass("wxSizerFlags")
+
+export(wxSizer_Add)
+exportMethods(wxSizer_Add)
+
+export(wxWindow_GetId)
+export(wxTextCtrl_IsMultiLine)
+
+exportMethods("coerce")
+
+exportPattern(".*")

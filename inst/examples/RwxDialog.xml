@@ -1,0 +1,228 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://www.omegahat.org/XSL/Rstyle.xsl"?>
+
+<article xmlns:r="http://www.r-project.org">
+
+<note>
+<para>To run this example, use the <r:func>xmlSource</r:func> function
+available by doing a regular <r:func>source</r:func> on the 
+URL <ulink url="http://www.omegahat.org/xmlInternalSource.R">xmlInternalSource.R</ulink>.
+Then,
+<programlisting lang="r">
+ xmlSource("http://www.omegahat.org/RwxWidgets/ExampleDocuments/RwxDialog.xml")
+</programlisting>
+</para>
+</note>
+
+<section>
+<title>Creating a general dialog in R</title>
+
+<para>
+In this article, we create a dialog in R using the general wxDialog
+C++ class in wxWidgets.  This follows from chapter 9 in the <biblioref
+end="wxWidgetsBook">wxWidgets book</biblioref>.  We will create a
+relatively simple dialog that allows the user to specify the start and
+end dates of interest for a particular collection of data and to
+specify a value for the percentile of interest that defines an extreme
+event.  We use a wxCalendarCtrl widget for each of the start and end
+dates and xSpinCtrl for specifying the percentile of interest.
+The resulting dialog looks like <graphic fileref="RwxDialog.jpg"/>.
+</para>
+
+<para>
+We start by writing a function to create the dialog display
+<r:code>
+ID_RESET = wxID_ANY
+
+dlg = RwxDialog(NULL, wxID_ANY, "Dates", size = as.integer(c(200, 100)))
+mainSizer = wxBoxSizer(wxVERTICAL)
+
+start = end = wxDefaultDateTime()
+a = wxCalendarCtrl(dlg, date = start)
+b = wxCalendarCtrl(dlg, date = end)
+
+sz = wxBoxSizer(wxHORIZONTAL)
+tmp = wxStaticBoxSizer(wxVERTICAL, dlg, "Starting Date")
+tmp$Add(a)
+sz$Add(tmp, 1, c(wxEXPAND, wxALL), 10)
+
+tmp = wxStaticBoxSizer(wxVERTICAL, dlg, "Ending Date")
+tmp$Add(b)
+sz$Add(tmp, 1, c(wxEXPAND, wxALL), 10)
+
+
+mainSizer$Add(sz, 1, wxEXPAND)
+
+tmp = wxBoxSizer(wxHORIZONTAL)
+tmp$Add(wxStaticText(dlg, wxID_ANY, "Percentile above which are extreme events"), 0, wxALIGN_CENTER_VERTICAL)
+spin = wxSpinCtrl(dlg, min = 0, max = 100, initial = 95)
+tmp$Add(spin, 1, wxEXPAND, 5)
+mainSizer$Add(tmp, 0, c( wxALIGN_CENTER, wxALL), 10)
+
+line = wxStaticLine(dlg, wxID_STATIC, style = wxLI_HORIZONTAL, size = as.integer(c(300,10)))
+mainSizer$Add(line, 0, c(wxGROW, wxALL, wxALIGN_CENTER), 5)
+
+btnSizer = wxBoxSizer(wxHORIZONTAL)
+btnIds = c("Reset" = ID_RESET, "Cancel" = wxID_CANCEL, "Ok" = wxID_OK)
+sapply(names(btnIds),
+       function(id) {
+          b = wxButton(dlg, btnIds[id], id)
+	  btnSizer$Add(b, 0, c(wxGROW, wxALIGN_CENTER, wxALL), 10)
+          b
+       })
+
+mainSizer$Add(btnSizer, 0, wxALIGN_CENTER)
+
+
+dlg$SetSizer(mainSizer)
+mainSizer$SetSizeHints(dlg)
+<r:code ref="validate"/>
+</r:code>
+<footnote>
+<para>The wxCAL_SEQUENTIAL_MONTH_SELECTION style causes the month buttons not to 
+work.
+</para>
+</footnote>
+<note>This needs to be tidied up.</note>
+</para>
+
+<para>
+Now that we have the basic Dialog displayed
+we need to be able to get the data from it.
+Since we are constructed it, we have access to the
+different widgets and can query their values.
+So we can have a corresponding R function 
+that fetches the values given the dialog
+and the associated widgets.
+<r:code>
+dlg$ShowModal()
+
+p = spin$GetValue()
+start = as(a$GetDate(), "POSIXct")
+end = as(b$GetDate(), "POSIXct")
+print(list(p, start, end))
+</r:code>
+</para>
+
+<para>
+So at this point, we have all that we want and we can move on.  When
+we are using a modal approach, these other variables such as
+<r:var>spin</r:var> and <r:var>a</r:var> and <r:var>b</r:var> will be
+within the scope of the function call when we return from ShowModal.
+However, if we are using a non-modal approach, we have to arrange to
+have a callback function that would have access to these.  This is
+typically not a big problem as we define the callback within the
+function that creates the dialog and so has access to these variables.
+But there are potentially useful things we can do
+to simplify this.
+</para>
+
+<para>
+One idea is to specify identifiers for the 
+work components - <r:var>a</r:var>, <r:var>b</r:var>
+and <r:var>spin</r:var>.
+Then, given the dialog, we can get access to these values
+using the FindWindow method of all wxWindow objects.
+For example, we could define symbolic identifiers
+such as
+<r:var>ID_START</r:var>, <r:var>ID_END</r:var> and 
+<r:var>ID_PERCENTILE</r:var>
+and use these when creating the widgets, e.g.
+<r:code eval="false">
+ID_START = 200
+ID_END = 201
+ID_PERCENTILE = 202
+
+wxCalendarCtrl(dlg, ID_START, start)
+wxCalendarCtrl(dlg, ID_END, end)
+</r:code>
+Then, we can access these with
+<r:code eval="false">
+tmp = dlg$FindWinodw(ID_START)
+as(tmp$GetDate(), "POSIXct")
+</r:code>
+This approach allows others to more easily use and understand your
+dialogs, or indeed yourself in different circumstances. It supports
+code reuse as there are easy ways to find the relevant widgets once we
+have the dialogs.
+</para>
+
+<para>
+Another approach is to use an explicit environment in which we assign
+variables and get fetch them later in other calls.  This is what we
+get implicitly with a closure/lexical scoping.  You can see how we use
+this approach in <ulink url="treeCtrl.xml">drag and drop with a tree
+control</ulink>.
+Basically, we can create a new environment in R
+with <r:func>new.env</r:func>
+and then assign variables into this using, e.g.
+<r:code eval="false">
+e = new.env()
+e$spin = spin
+</r:code>
+And then later, we can fetch the values as long as we have access to
+<r:var>e</r:var> with
+<r:code eval="false">
+val = e$spin$GetValue()
+</r:code>
+and so on.
+</para>
+</section>
+
+<section>
+<title>Validators</title>
+<para>
+One of the difficulties we get into with this dialog (and with many
+that involve multiple, related controls) is ensuring that the values
+are consistent.  For example, it is very easy for the user to set the
+starting date to be later in time than the end date, or vice verse.
+We have built in limits for the percentile, but in other cases we
+might want to ensure that the values were limited to a particular
+disjoint range, or that any text input was only characters and not
+numbers or only hexadecimal 'digits'.
+To do this, we need either to put event handlers on
+the individual controls, e.g. the two calendar controls,
+or alternatively use a validator.
+<r:code id="validate">
+h = 
+function(ev) {
+   if(a$GetDate()$IsLaterThan(b$GetDate())) {
+     warning("start is later than end date")
+     ev$Skip(FALSE)
+     TRUE
+   } else
+     FALSE
+}
+a$AddCallback(wxEVT_CALENDAR_SEL_CHANGED, h)
+b$AddCallback(wxEVT_CALENDAR_SEL_CHANGED, h)
+</r:code>
+This function does not prohibit the selection,
+just issues a warning. We may want to change the color
+of the event widget to illustrate that it is invalid
+as it stands or explicitly reset the value to an 
+appropriate time and date. But the latter is annoying
+when a user wants to set one and then other and allow
+them to be temporarily inconsistent.
+</para>
+<para>
+We could use a wxWidgets validator to enforce this also.
+However, it is not clear that this saves us any work at this
+point in time and so we ignore it for now.
+</para>
+</section>
+
+
+<section>
+<ignore> 
+We will use the same example as in that chapter
+to simplify things and focus on the difference
+between doing this in R and C++.
+The desired dialog looks like
+<graphics fileref="RwxDialog.jpg"/>
+We have 4 buttons at the bottom and in the work area, we have two
+wxStaticText objects and then a wxTextCtrl and a collection of
+wxSpinCtrl, a wxChoice and a wxCheckBox.
+</ignore>
+</section>
+
+</article>

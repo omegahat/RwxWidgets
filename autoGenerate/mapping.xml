@@ -1,0 +1,473 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="/Users/duncan/Projects/org/omegahat/Docs/XSL/Rstyle.xsl"?>
+<article xmlns:cpp="http://www.cplusplus.org"
+         xmlns:r="http://www.r-project.org">
+<abstract>
+We present a possible mapping scheme from C++ code for wxWidgets
+to R.  This should apply to most other C++ libraries also,
+but we also want to allow the user to customize the bindings
+being generated.
+</abstract>
+
+<section>
+<title>Introduction</title>
+I have undertaken the exercise of manually interfacing
+to many of the wxWidgets classes and methods.
+The basic "algorithm" or approach is the following
+for mapping a class to R.
+
+<itemizedlist>
+<listitem>
+Identify the class name and the names of the class from which it inherits or is derived.
+</listitem>
+
+<listitem>
+Define an R class with that name that contains/extends the
+base classes.  (These should already have been defined but
+the order of processing may be an issue.)
+If the C++ class is abstract, define it as virtual in R.
+However, in the wxWidgets world, and probably for all other 
+C++ libraries also, the R user is not intended to create instances of these
+themselves and instances are created only in the C++ code.
+</listitem>
+
+<listitem>
+For each method, create the 
+<itemizedlist>
+<listitem><para>
+C++ wrapper routine that is to be called from R, 
+</para></listitem>
+<listitem><para>
+and also the R function to call that routine
+and name it
+<r:func>className_method</r:func>
+where className of course comes from the name of the C++ class 
+being processed, i.e. for the Append method in wxMenuBar,
+the R function would be wxMenuBar_Append.
+</para></listitem>
+<listitem><para>
+In addition to defining the C++ routine, we need to 
+put the declaration of the C++ routine in
+an <code>extern "C"</code> block.
+</para></listitem>
+</itemizedlist>
+
+<para>
+The R function is named 
+<r:code>className_methodName</r:code>.
+While this is clear, it is somewhat verbose
+and if we want to call a method, say Add, from
+say a wxSizer object, when we have a wxBoxSizer
+object, we have to remember that the method is named
+wxSizer and not wxBoxSizer.
+A more convenient calling convention is 
+<r:code>
+ obj$Add(widget)
+</r:code>
+</para>
+
+<para>
+We define a method for $ 
+for the base classes<footnote><para>If there is more than one
+root class in the C++ library, we need to do this for each of these classes.</para></footnote>
+that arranges to find the R function that is "closest" to this class.
+Specifically, it asks the C++ object for a list of all its ancestor classes
+(including its own class) using
+<r:func>getWxClassInfo</r:func>
+For each of the names of all the classes that this object "implements",
+we look for a function named
+<r:func>className_methodName</r:func>.
+When we find one, we return that function
+(or actually a new function that takes an arbitrary number of arguments
+and calls the function with obj as the first argument.)
+</para>
+
+<para>
+If the entire list of class names cannot be computed at run-time from
+the C++ objects themselves, the bindings must arrange to keep this information
+in a table within the generated package so that it can be discovered at run time.
+</para>
+
+<section>
+<title>Polymorphism</title>
+<para>
+If a method is polymorphic/overloaded, then
+we need to do something in addition to the basic
+generation above.
+</para>
+
+<para>
+Let's consider the Add method for the wxSizer class.
+There are 6 methods and no inherited Add methods from
+the base classes.
+<cpp:code>
+<![CDATA[
+    inline wxSizerItem* Add( wxWindow *window,
+                             int proportion = 0,
+                             int flag = 0,
+                             int border = 0,
+                             wxObject* userData = NULL );
+    inline wxSizerItem* Add( wxSizer *sizer,
+                             int proportion = 0,
+                             int flag = 0,
+                             int border = 0,
+                             wxObject* userData = NULL );
+    inline wxSizerItem* Add( int width,
+                             int height,
+                             int proportion = 0,
+                             int flag = 0,
+                             int border = 0,
+                             wxObject* userData = NULL );
+    inline wxSizerItem* Add( wxWindow *window, const wxSizerFlags& flags );
+    inline wxSizerItem* Add( wxSizer *sizer, const wxSizerFlags& flags );
+    inline wxSizerItem* Add( wxSizerItem *item );
+]]>
+</cpp:code>
+When we recognize that this is overloaded, we create
+the C++ wrapper routines by using names made up from the
+type of the parameters.
+</para>
+
+<para>
+So, the wrapper routines are named
+<cpp:code>
+R_wxSizer_Add_wxWindowPtr_int_int_int_wxObjectPtr
+R_wxSizer_Add_wxSizerPtr_int_int_int_wxObjectPtr
+R_wxSizer_Add_int_int_int_int_int_wxObjectPtr
+R_wxSizer_Add_wxWindowPtr_wxSizerFlags
+R_wxSizer_Add_wxSizerPtr_wxSizerFlags
+R_wxSizer_Add_wxSizerItemPtr
+</cpp:code>
+<footnote><para>
+We should explicitly add a Ptr to each parameter that is a pointer
+to differentiate between the case that it is a pointer or an actual object of that type.
+</para></footnote>
+</para>
+
+<para>
+The signature and body of each of the
+wrapper routines is the same as it would be if the method were not
+overloaded.
+</para>
+
+<para>
+While we could handle the dispatching of R function calls to
+the relevant methd ourselves as we do with the $ method, we
+can also use the S4 multi-argument dispatch mechanism.
+In this case, we would define a generic function
+wxSizer_Add.  The formal parameters of the generic 
+must be the "union" of all the methods,
+i.e. have as many parameters as the method with the most number of parameters.
+In this case, the third method has 6 parameters so we define the R function as
+<r:code>
+setGeneric("wxSizer_Add", 
+           function(this, width, height, proportion, flag, border, userData) 
+             standardGeneric("wxSizer_Add"))
+</r:code>
+Note that we add the "this" parameter at the beginning to identify the
+object whose method is being invoked.
+</para>
+
+<para>
+Note also that the parameter names are now confusing
+to the caller.
+And the default arguments are troublesome.
+</para>
+
+
+<para>
+We then define S4 methods for each of the specific routines.
+It is best to start with the methods that have no default values for the
+parameters, i.e. the final methods in our example.
+We can then define very precise signatures for invoking these in R:
+<r:code>
+setMethod("wxSizer_Add", c("wxSizer", "wxWindow", "wxSizerFlags"),
+           function(this, width, height, proportion, flag, border, userData)  {
+	     .Call(R_wxSizer_Add_wxWindowPtr_wxSizerFlags, this, width, height)
+           })
+
+setMethod("wxSizer_Add", c("wxSizer", "wxSizer", "wxSizerFlags"),
+           function(this, width, height, proportion, flag, border, userData)  {
+	     .Call(R_wxSizer_Add_wxSizerPtr_wxSizerFlags, this, width, height)
+           })
+setMethod("wxSizer_Add", c("wxSizer", "wxSizerItem"),
+           function(this, width, height, proportion, flag, border, userData)  {
+	     .Call(R_wxSizer_Add_wxSizerItemPtr, this, width)
+           })
+</r:code>
+</para>
+
+
+<para>
+For the other methods, we want to honor the default values
+and not require them in the call in order to differentiate
+between the methods.
+In this case, it is easy to see that the third method has two required
+arguments, so we define a method for that.
+Note that only need the first two arguments to differentiate between the other methods.
+We cannot generally have the generic function have the appropriate default
+values for all the arguments, so we arrange to set the parameters 
+to the relevant default values in the body of the method.
+We therefore define the method as
+<r:code>
+setMethod("wxSizer_Add", c("wxSizer", "numeric", "numeric"),
+           function(this, width, height, proportion, flag, border, userData)  {
+             if(missing(proportion))
+               proportion = 0
+             if(missing(flag))
+               flag = 0
+             if(missing(border))
+               border = 0
+
+	     .Call(R_wxSizer_Add_int_int_int_int_int_wxObject, 
+                     this, as.integer(width), as.integer(height),
+                           as.integer(proportion), as.integer(flag),
+                           as.integer(border), as(userData, "wxObjectOrNULL"))
+           })
+</r:code>
+</para>
+
+<para>
+The remaining two methods - the first and second - can now be
+differentiated from each other and the other methods by just their
+first argument, i.e. the only require ones.  One might think that if
+the first method was called with only a wxWindow object, then it could
+be confused with the fourth method that also takes a wxWindow pointer as its
+first argument. However, the fourth method must also be called with a wxSizerFlags
+object.  If we omit a specification of any of the remaining arguments, the
+S4 dispatch will match the first method if only a single argument is provided.
+<r:code>
+setMethod("wxSizer_Add", c("wxSizer", "wxWindow"),
+           function(this, width, height, proportion, flag, border, userData)  {
+             if(missing(height)) # aka proportion
+               height = 0
+             if(missing(proportion)) # aka flag
+               proportion = 0
+             if(missing(flag))  # aka border
+               flag = 0
+	     if(missing(border)) # aka userData
+	        border = NULL
+
+	     .Call(R_wxSizer_Add_wxWindowPtr_int_int_intwxObjectPtr, 
+                     this, width,
+                     as.integer(height), as.integer(proportion),
+                     as.integer(flag), as(border, "wxObjectOrNULL"))
+           })
+</r:code>
+</para>
+
+<para>
+If a method is polymorphic across base and derived classes,
+i.e. a virtual method in class A that is implemented in class B that extends A,
+we need the same mechanism to dispatch correctly.
+</para>
+
+<para>
+For example, consider wxGridBagSizer derived from
+wxSizer.
+It should inherit all the methods for wxSizer as defined
+above. However, that derived class also defines 
+four new methods
+<cpp:code>
+<![CDATA[
+wxSizerItem* Add(wxWindow* window, const wxGBPosition& pos, const wxGBSpan& span = wxDefaultSpan, int flag = 0, int border = 0, wxObject* userData = NULL)
+wxSizerItem* Add(wxSizer* sizer, const wxGBPosition& pos, const wxGBSpan& span = wxDefaultSpan, int flag = 0, int border = 0, wxObject* userData = NULL)
+wxSizerItem* Add(int width, int height, const wxGBPosition& pos, const wxGBSpan& span = wxDefaultSpan, int flag = 0, int border = 0, wxObject* userData = NULL)
+wxSizerItem* Add(wxGBSizerItem* item)
+]]>
+</cpp:code>
+</para>
+
+<para>
+When we see this, we realize that we need to modify our generic and hence all the methods we defined above.
+We need to introduce an 8-th argument as the third method in our new set has
+7 parameters in addition to the 'this' object and we only had six earlier.
+So this illustrates that we must collect all the methods from all the classes
+in order to generate the bindings for all of them correctly.
+</para>
+<para>
+Given the entire collection of methods and the class in which they are defined,
+we can use the above procedure to define all the S4 methods.
+The earlier definitions would be essentially unchanged except for the additional
+parameter added to bring the list of parameters to length 8,
+the number in the largest method.
+The last definition from the methods for wxGridBagSizer would be
+<r:code>
+setMethod("wxSizer_Add", c("wxGridBagSizer", "wxGBSizerItem"),
+           function(this, width, height, pos, span, flag, border, userData)  {
+             .Call(R_wxGridBagSizer_Add_wxGBSizerItem, this, width)
+           })
+</r:code>
+</para>
+
+<para>
+Note however that the third method would cause a conflict with the
+third method from the wxSizer class.  Both signatures have a pair of
+int parameters at the beginning.  The same "algorithm" will give the
+correct result however when dealing with all the methods as a single
+collection.  The method for wxGridBagSizer requires 3 arguments -
+width, height and pos.  Therefore, we would generate the more specific
+method signature for it before dealing with the similar method from
+wxSizer which only requires two arguments. In this way, S4 will
+identify the method calls correctly two integers followed by a
+wxGBPosition will lead to the wxGridBagSizer method and two integers
+by themselves or followed by another integer will identify the
+alternative method.
+</para>
+<para>
+What about a virtual method<footnote><para>
+If the method is not virtual, the the dispatch is to the
+particular class in which the method is defined</para></footnote>
+defined in one class
+that is defined in the parent class with an identical 
+signature.
+Suppose we have a method 
+<cpp:code>
+void foo(int) 
+</cpp:code>
+defined in a class A and 
+another class B that extends A and also defines an
+identical method.
+</para>
+
+<para>
+Using the mechanism we have outline above,
+we will have a generic function for <r:func>foo</r:func> in R
+and it will have methods defined as
+<r:code>
+setMethod("foo", c("A", "integer"), ...)
+setMethod("foo", c("B", "integer"), ...)
+</r:code>
+Now, when we call the function foo with 
+an object, S4 dispatch will find the relevant one.
+So all is well from the R side of things.
+And the C++ methods will be distinct as 
+the have the name of the class for which they are defined in
+the name. And the implementations of the R methods will
+refer to those C++ routines.
+</para>
+
+<para>
+One difficulty that does arise is how can we invoke super method,
+i.e. A::foo, from within R when we have an object of class B.  Let's
+call this object b for simplicity.  Then, <r:expr>foo(b, 1)</r:expr>
+will find the method for "B" and invoke the routine R_B_foo and so end
+up invoking the method in the class B.
+</para>
+<para>
+If we were to coerce the R object b to an instance of the R class A
+and then invoke foo, e.g.
+<r:code>
+foo(as(b, "A"), 1)
+</r:code>
+what would happen?  R will dispatch to the method for class A as we
+want. This will invoke the C++ routine R_A_foo, again as we want.  And
+that routine will dereference the R object and invoke the C++ code
+essentially as
+<cpp:code>
+ a->foo(1)
+</cpp:code>
+Now at this point, the C++ object whose method is being
+invoked is still an instance of class B. So,
+the method in the class B will be invoked.
+</para>
+
+<para>
+Similarly, if we have two unrelated classes, A and B, i.e. that B does
+inherit from A and vice verse, we also need a mechanism to
+dispatch. However, in this case <r:code>a$method()</r:code> and
+<r:code>b$method()</r:code> will find the relevant functions simply by
+the fact that class information for A and B do not share a function
+name in common.  If, for example, both A and B are derived from
+classes Y which is derived from X and both A and B independently
+define a method for foo, then the function name for each would be
+A_foo and B_foo and a$foo() and b$foo() would find the relevant one
+from the class information from objects a and b.
+</para>
+</section>
+
+<listitem>
+If the class has publically accessible fields, 
+provide access methods and R functions for these.
+(One may not want to allow a user to set them
+if there are accessor methods in the class itself,
+but...)
+</listitem>
+
+
+<listitem>
+Define a new class that extends this C++ class
+and that also extends RCppClass to allow a user
+to extend the C++ class with C++ methods that are 
+"direct" calls to R functions.
+The RCppClass provides a field for storing the table
+of R functions that correspond to the C++ methods.
+Each method in the base class is duplicated
+in the derived class. The body of each method
+involves a query of the function table to see if
+there is a "method" for the specified routine.
+If so, the arguments are marshalled in a call to that
+function and the result marshalled as the return value of the routine. 
+If no function has been inserted into the method table, the
+base method is called from the base class.
+<cpp:code>
+int 
+foo(int x, double y)
+{
+  int ans;
+  SEXP f;
+  f = lookupRMethod("foo_int_double");
+  if(f == R_NilValue) {
+    ans = BaseClass->foo(x, y);
+  } else {
+    SEXP r_ans;
+    r_ans = invokeRMethod(f, ScalarInteger(x), ScalarReal(y))
+    ans = INTEGER(ans)[0];
+  }
+  return(ans);
+}
+</cpp:code>
+</listitem>
+</listitem>
+
+</itemizedlist>
+
+</section>
+
+<section>
+<title>Basic Types</title>
+As one might expect, there is a great deal of use
+of primitive data types, i.e. int, long, bool
+and also widespread use of one or two basic data
+types that are wxWidgets-specific. 
+The wxString type is the most obvious of these.
+Similarly, the array-types of basic elements
+such as wxArrayInt, wxArrayString are also commonly
+used.
+The int, long, bool can all be dealt with 
+for arbitrary C/C++ code.
+The wxString class and the array types are clearly
+wx-specific. So we want to be able to specify
+a piece of code that will be used to convert each these 
+to and from the corresponding R data types.
+The wxString is the simplest.
+
+The details of the conversion code are not important.
+It is the existence of a routine that can be called
+with the value to be converted and that will return 
+the value.
+
+</section>
+
+<section>
+<title>Enumerations and Symbolic Constants</title>
+</section>
+
+
+<section id="Documentation">
+<title>Documentation</title>
+The wxWidgets distribution comes with a utility
+tex2rt in the <dir>utils</dir> directory.
+</section>
+
+</article>

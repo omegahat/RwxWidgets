@@ -1,0 +1,11 @@
+<article>
+
+One of the first things I wanted to know was how do I arrange
+a collection of widgets in a frame as a row, or in a table.
+Looking through the documentation, there is no 
+layout widget as there is in Gtk. However, there are 
+wxSizer classes which give a lot of flexibility
+and perhaps more than the other toolkits.
+
+
+</article>

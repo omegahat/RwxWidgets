@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>FAQ for RwxWidgets Package</title>
+<link rel="stylesheet" type="text/css" href="../OmegaTech.css">
+</head>
+
+<body>
+<h1>FAQ for RwxWidgets Package</h1>
+
+<dl>
+  <dt>
+  <li> I'm running on Mac OS X using the console, and I can create
+  windows, but they are always in the background and don't respond to
+  events. I basically get the spinning beachball.
+  What's the problem?
+      
+ <dd>
+     Use Simon Urbanek's CarbonEL package.
+     And make certain you are using a Carbon application
+      in which you launch R, e.g. Terminal, iTerm, AquaEmacs, 
+     and specifically not an X11 xterm. This does not work in an xterm.
+<p/>
+     The following  works well.
+<pre>
+library(RwxWidgets)
+wxInit()
+library(CarbonEL)     
+</pre>     
+     <p>
+     If you run R via the "standard" GUI
+     in the R dmg file, the RwxWidgets tools will work just fine.
+     You can run one of the scripts and enter the event loop.
+     Then, when you close that window by deleting it with the red
+     X button on the frame, you will get the prompt back.
+     It is not ideal, but it does allow us to test RwxWidgets.
+
+
+ <dt>
+ <li> I am trying to install wxWidgets on my Mac. I run configure and
+ all seems well and then when I type make, I get an error immediately
+     about the compiler not understanding -fpascal-strings and
+ -no-cpp-precomp.
+      What's up?
+ <dd>
+
+       Copy the files /usr/share/libtool/config.sub and
+       /usr/share/libtool/config.guess into the top-level wxWidgets
+        source directory and then re-run  configure and things should
+       be better.
+
+<p/>
+      If this doesn't fix things, edit configure.in and find the line
+      that sets the FLAGS to "-fpascal-strings".
+      Simply comment this out or remove set the contents to "" rather
+     than "-fpascal-strings". Then, back at the shell, run
+      autoconf and then ./configure  and things should be okay.
+
+<p>
+ Alternatively, you can run
+     configure with the following arguments
+     --disable-shared --enable-unicode --enable-monolithic
+     
+ <dt>
+ <li>  I am working on Linux and when I bring up an HTML document using the
+   wxHTML widget, I get an error dialog about the encoding. How can I get rid of these?
+ <dd>  Configure the  wxWidgets build with --enable-unicode,
+        untar the source and run the command
+<pre>
+        ./configure --enable-unicode ; make
+</pre>
+   from within the top-level directory of the wxWidgets source tree.    
+
+
+  <dt>
+  <li> When I try to run RwxWidgets within a debugger, I get problems
+starting the R process or loading the package.
+  <dd>
+    It is probably best to compile wxWidgets without support for threads.
+  Do this with
+<pre>
+        ./configure --enable-threads=no --enable-joystick=no ; make
+</pre>
+
+
+  <dt>
+  <li> I have a method for handling HTML links using the OnLinkClicked
+      method for wxHtmlWindow.
+      But when the method gets called, I can't use the wxHtmlLinkInfo
+      object as expected, e.g. <code>link$GetHref()</code> doesn't work.
+      What's the problem?
+      
+  <dd> The issue is that wxHtmlLinkInfo is not a dynamic class,
+      i.e. we cannot ask the C++ instance about its class information.
+      This is an implementation choice for wxWidgets and leaves us
+      without the ability to dynamically determine the class of
+      the object and so find its methods implicitly via $.
+      Rather, you have to call the methods explicitly, e.g.
+      <code>wxHtmlLinkInfo_GetHref(info)</code>
+      or
+      <code>as(info, "wxHtmlLinkInfo")$GetHref()</code>.
+      If you are going to make repeated use of the object,
+      then doing the coercion and assigning the result
+      to a variable in R and then calling the methods
+      may be convenient, e.g.
+      <pre>
+       info = as(info, "wxHtmlLinkInfo")
+       info$GetHref()
+      </pre>
+
+
+  <dt>
+  <li> When writing code, I use R_make_wxWidget_Ref() and I get an
+      error about the first argument not being a wxObject *
+      eventhough it is an instance of a class that does extend
+      wxObject.
+      What's up?
+      
+  <dd> Make certain you have included the header file that defines
+      that class. Otherwise you may just be getting a simple
+      declaration for the class, e.g. friend class Foo
+      and so the inheritance is not known to the compiler at that
+      point.
+      For example, in RwxHtmlParser.cpp, we had to include
+      wx/html/htmlwin.h
+      to get the definition of wxHtmlWindow.
+
+
+  <dt>
+  <li>
+      I am trying to install on the Mac from source.
+      When I run configure and the type make I get an error about a
+      compiler flag -no-cpp-precomp. What's the problem?
+      
+  <dd>
+       Copy config.* from /usr/share/libtool/ to the top-level
+      directory of the
+
+  <dt>
+  <li> How do I build wxWidgets on Windows?
+  <dd> Download the source and untar it or expand it by running the
+  .exe if it is a self-installing version.
+       Then go to the directory that was created and create a new sub-directory, say,
+       "duncan". Then 'cd' to it.
+       Then type ../configure --enable-threads=no --enable-joystick=no --enable-unicode
+      
+</dl>
+
+
+
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Fri Aug 24 16:53:19 PDT 2007
+<!-- hhmts end -->
+</body> </html>

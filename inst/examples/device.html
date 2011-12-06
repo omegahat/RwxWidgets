@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Embedded Device</title>
+</head>
+
+<body> In this example, we are going to have a regular HTML document
+with an &lt;Rdevice&gt; tag that is equivalent to an <code>OBJECT
+type="x-app/x-Rdevice"</code> component.  The idea is that we will
+replace that node in the document with an actual R graphics device and
+make that the active device.  Then, all plots will subsequently be
+drawn on that (until another device is created in the R session).
+We add a button so that we can test updating the plots.
+
+<button label="New plot">
+print(.Devices)
+  i = sample(grep("wxDevice", unlist(.Devices)), 1)
+  dev.set(i)
+  plot(1:10)
+</button>
+(Note that we put the code for the callback in the contents of the
+HTML node and not hard-code it into the R function. This makes it easy
+to change.)
+
+<p>
+<Rdevice>hist(rnorm(100), main = "Sample of 100 from a Normal distribution")</Rdevice>
+
+<p>
+<hr  width = "75%">
+Next, we put two devices into a table.
+<p>
+<table>
+<tr>
+  <th>
+      <Rdevice>hist(rnorm(100), main = "Sample of 100 from a Normal distribution")</Rdevice>
+  </th>
+  <th>
+      <Rdevice>boxplot(rnorm(100), main = "Sample of 100 from a Normal distribution")</Rdevice>      
+  </th>
+</tr>
+</table>
+</p>
+
+We should have a mechanism to get all the components in the HTML page
+from within the handler code and callbacks.  We've done that in the
+past for dynamic documents so we need to revisit that framework.
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Mon Nov 27 10:31:36 PST 2006
+<!-- hhmts end -->
+</body> </html>

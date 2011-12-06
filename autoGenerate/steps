@@ -1,0 +1,4 @@
+
+Determine abstract classes.
+ Remove constructor methods from the generation
+ Identify required methods for R user creating derived classes.

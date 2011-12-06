@@ -1,0 +1,228 @@
+<article xmlns:r="http://www.r-project.org">
+<section>
+<para>
+<r:code>
+library(RGCCTranslationUnit)
+tu = parseTU("wx.cpp.001t.tu")
+</r:code>
+
+<r:code>
+# All the class nodes
+klasses = getClassNodes(tu)
+
+i = grep("^wx", names(klasses))
+</r:code>
+
+<r:code>
+targetFiles = basename(list.files("/usr/local/include/wx-2.8/wx", recursive = TRUE))
+</r:code>
+</para>
+
+<para>
+<fix> i and out and what is what. This was done interactively and not trapped entirely.</fix>
+We are not interested in many of the system classes and types.
+So we get a regular expression to filer those.
+<r:code>
+ filterOut = "^(\\.|std::|__gnu_cxx::|pthread|__pthread)"
+</r:code>
+
+
+Get the names of all the classes not starting with wx.
+Then, throw away the ones we know we are not interested in
+which are identifed by filterOut.
+Then get the source file for each of the remaining ones and see which are
+in our targetFiles. We can keep those potentially.
+<r:code>
+i = grep("^wx", names(klasses))
+out = names(klasses)[-i]
+
+src = gsub(":[0-9]+", "", sapply(klasses[out [ - grep(filterOut, out) ]], "[[", "source"))
+</r:code>
+This gives 29  e.g. "_wxHashTableBase2","_WX_LIST_ITEM_TYPE_wxToolBarToolsList", "GAddress", msghdr.
+We don't actually want the GAddress as we discuss below as they are part of sockets.
+So let's remove those by identifying the socket files with
+<r:expr>grep("sock", targetFiles, val = TRUE)</r:expr>.
+When we look at the remainder, we see fsid_t, __fsid_t and __exception as being
+anomolous and sure enough these are from system files with names
+that occur in the wx directory, types.h and math.h.
+So let's add those to the list we don't want.
+<r:code>
+leaveIn = c(names(src)[src %in% setdiff(targetFiles, c(grep("sock", targetFiles, val = TRUE), "types.h", "math.h"))],
+            names(klasses)[i])
+</r:code>
+</para>
+
+
+<para>
+So we take our subset and we further discard wxStdString from the mix.
+<r:code>
+klasses = klasses[ leaveIn ]  # 559 left
+
+DiscardedClasses = c("wxStdString")
+klasses = klasses [ !(names(klasses) %in% DiscardedClasses) ]
+</r:code>
+
+Now we can get the class methods
+<r:code>
+classMethods = lapply(klasses, getClassMethods)
+</r:code>
+
+<r:code>
+resolvedClassMethods = lapply(classMethods, resolveType, tu)
+</r:code>
+</para>
+</section>
+
+
+<section id="routines">
+<para>
+<r:code>
+ routines = getRoutines(tu)
+ src = gsub(":[0-9]+", "", sapply(routines, function(x) tu[[ x$INDEX ]][["source"]]))
+droppedRoutines = routines[!(src %in% targetFiles) ]
+ routines = routines[ src %in% targetFiles ]
+</r:code>
+This still leaves us with a lot and many that don't look interesting.
+memrchr, strcmp, memmove which merely share common file names,
+e.g. string.h We can eleminate those by creating the TU for the system
+files alone and finding out what are in those.
+<r:code>
+sys.tu = parseTU("system.cpp.001t.tu")
+sysRoutines = getRoutines(sys.tu)
+routines = routines[ !( names(routines) %in% names(sysRoutines))]
+</r:code>
+</para>
+
+<para>
+There are many operators such as as minus, plus, lshift,
+etc. that refer to top-level C++ routines such as
+
+ wxPoint2DDouble operator-(const wxPoint2DDouble&amp; pt1 , const wxPoint2DDouble&amp; pt2)
+in wx/geometry.h
+We want those and to set methods for them.
+Many of them are binary operators that already exist in R
+and the all we have to do is generate the code for them.
+They will not impact the definition of generic we will define
+in relation to the class methods and top-level routines.
+<r:code>
+isOp = sapply(routines, function(x) "operator" %in% names(tu[[x$INDEX]])  )
+unique(names(isOp[isOp]))
+<r:output>
+ [1] "mult"   "minus"  "plus"   "ne"     "eq"     "lshift" "rshift" "ge"    
+ [9] "le"     "gt"     "lt"    
+</r:output>
+</r:code>
+And these are all binary operators.
+So we filter them out, holding on to them for later code generation
+<r:code>
+operatorRoutines = routines[isOp]
+routines = routines[!isOp]
+</r:code>
+This leaves 299.
+Many of these start with "wx" and appear reasonable.  
+Those that don't are
+<r:code>
+names(routines)[ - grep("^wx", names(routines))]
+</r:code>
+</para>
+<para>
+For endl, we should include txtstrm.h in our system.cpp file and exclude it that way.
+</para>
+<para>
+The GAddress elements come from gsocket.h and we are not interested
+in those for this package. Similarly, anything coming from socket.h 
+can also be eliminated.
+And on Unix,  this includes the header file gsockunx.h
+We are also not worried about routines in hashmap.h
+such as grow_lf70 and never_grow.
+We can put the names of these ignorable header files together and
+filter the routines based on whether their source is there.
+<r:code>
+ignoredHeaderFiles = c("socket.h", "gsocket.h", "gsockunx", "txtstrm.h", "hashmap.h")
+isIgnored = sapply(routines, function(x) length(grep(paste(ignoredHeaderFiles, collapse = "|"), tu[[x$INDEX]][["source"]])) > 0)
+routines = routines[!isIgnored]
+</r:code>
+At the end of this, there are only 8 routines not starting with "wx"
+<r:code>
+names(routines)[ - grep("^wx", names(routines))]
+<r:output>
+[1] "XTFREE"                  "GetLine"                
+[3] "NewControlId"            "ConvertToIeeeExtended"  
+[5] "ConvertFromIeeeExtended" "Stricmp"                
+[7] "Strlen"                  "IsEmpty"                
+</r:output>
+</r:code>
+So we go ahead an resolve all the routines
+<r:code>
+resolvedRoutines = resolveType(routines, tu)
+</r:code>
+and we can combine these with the class methods to
+get the dispatch information for each routine and method.
+</para>
+<para>
+In fact, we can find out how many of the routines actually need
+any method dispatching at all
+<r:code>
+allMethodNames = unique(unlist(lapply(classMethods, names)))
+intersect(names(routines),  allMethodNames)
+<r:output>
+[1] "NewControlId" "IsEmpty"     
+</r:output>
+</r:code>
+So in fact we only have to include those two when considering
+overloaded routines and methods.
+</para>
+<para>
+
+</para>
+</section>
+<section id="enumerations">
+<title>Enumerations</title>
+<para>
+<r:code>
+enums = getEnumerations(tu)
+resolvedEnums = resolveType(enums, tu)
+</r:code>
+We end up with <r:expr>length(enums)</r:expr> of these.
+Then again, we filter out the ones we don't want.
+These include those with a prefix of  ios:: or std::,
+any socket related ones and finally template enums:
+<r:code>
+filterOut = "^(ios.*::|std::|locale::|__codecvt|.*_base::|__socket|__is_|GSocket|GAddres|.*<.+>)"
+discard = grep(filterOut, names(enums))
+names(enums)[ -c(discard, grep("^wx", names(enums)))]
+</r:code>
+The remainder all look fine, being anonymous enums and so top-level
+values or some typedef'ed enums from wxWidgets.
+<r:code>
+enums = enums[-discard]
+</r:code>
+This gives 238 of these.
+</para>
+
+</section>
+<section>
+<title>Global Constants</title>
+<r:code>
+globalConstants = computeGlobalConstants(tu, files = targetFiles)
+</r:code>
+
+There are  78 for which no code was generated:
+<r:warning>
+Warning message:
+In computeGlobalConstants(tu, files = targetFiles) :
+  no code generated for wxEvtHandler::sm_eventTableEntries, wxEvtHandler::sm_eventTable, wxComboBox::sm_eventTableEntries, wxComboBox::sm_eventTable, wxDefaultPosition, wxDefaultSize, wxPanelNameStr, wxDefaultValidator, wxComboBoxNameStr, wxControlNameStr, _wxHashTableBase2::ms_primes, _sys_errlist, wxRadioButtonNameStr, sys_errlist, wxToolBarBase::sm_eventTableEntries, wxToolBarBase::sm_eventTable, wxRadioBoxNameStr, wxDirSelectorPromptStr, wxDirDialogDefaultFolderStr, wxFrameBase::sm_eventTableEntries, wxDirDialogNameStr, wxTopLevelWindowBase::sm_eventTableEntries, wxFrameBase::sm_eventTable, wxTopLevelWindowBase::sm_eventTable, wxDefaultDateTime, wxDialogNameStr, wxStaticBoxNameStr, wxGaugeNameStr, wxFrameNameStr, wxStatusBar::sm_eventTableEntries, wxStaticBitmapNameStr, wxStatusBar::sm_eventTable, wxSliderNameStr, wxStatusBarNameStr, wxWindowBase::sm_eventTableEntries, wxWindowBase::sm_eventTable, wxStaticTextNameStr, wxToolBarNameStr, wxStatusLineNameStr, wxScrollBarNameStr, wxChoic [... truncated]
+</r:warning>
+
+</section>
+<section>
+
+<r:code>
+q = getCppDefines("~/Projects/org/omegahat/R/RwxWidgets/src/wxAll.h", "`wx-config --cflags`")
+qq = processDefines(q, keepFlags = TRUE, headerIfDefPattern = "(^__|(^__?[_A-Z]+__|_H_{,2}|_H_BASE_)$)",
+                     globalConstants = globalConstants, enumDefs = resolvedEnums, typeDefs = DefinitionContainer(tu))
+</r:code>
+</section>
+
+
+</article>

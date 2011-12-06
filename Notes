@@ -1,0 +1,67 @@
+One approach is to by-pass the R event loop and 
+add an event handler for the input on stdin 
+to the wxWidgets event loop.
+
+This is delicate, but at least we own all the
+relevant parts.
+How can we add a file descriptor to the event
+wxWidgets event loop?
+
+wxFile() can be used to wrap a file descriptor into a wx object
+that we may be able to add to the event loop.
+
+
+
+To read the class methods, etc. for wxWidget classes
+use g++ 3.2.2 rather than g++ 4.0.2
+
+
+echo "#include <wx/grid.h>" > grid.cpp
+PKG_CPPFLAGS="-fdump-translation-unit `wx-config --cxxflags`"
+CXX=/usr/bin/g++
+R CMD COMPILE grid.cpp
+/usr/bin/g++ -fdump-translation-unit -c `wx-config --cxxflags`  -I${R_HOME}/include grid.cpp -o /dev/null
+
+
+
+
+
+If the events can only be received by widgets in the ancsestry
+of the source widget, that prohibits us from attaching external
+event handlers defined outside of the hierarchy and using these.
+
+We can define handlers for different types, but this means 
+the list is fixed at compile time based on the event
+types known at that time.
+Or are we using more dynamic inheritance?
+
+Want to be able to handle new event types transparently,
+with only compilation of new bindings for thos events.
+
+
+
+
+Make certain we add the const in argument qualifiers when
+overiding a C++ method. Otherwise won't match.
+
+
+
+
+
+On Mac OS X (intel and G5), the windows create within R
+are being displayed terrifically, but not being brought
+to the foreground and the events are not being processed
+it appears.
+Is this because wxWidgets is embedded within our application?
+What is R doing on the mac at initialization that might be
+affecting this?
+Do we need to register for events at some point.
+This is like the quartz device on R under the mac.
+The similarities are immense.
+
+Do we need to link with a library that does something different?
+Can we do it with a call to a routine that kicks us into another 
+world?
+
+We are running a blocking event loop in the R scheme of things
+and not getting the events.

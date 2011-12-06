@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>RwxWidgets Annotated Examples</title>
+<link rel="stylesheet" href="http://www.omegahat.org/OmegaTech.css">
+</head>
+
+<body>
+<h1>RwxWidgets Annotated Examples</h1>
+
+We provide some lengthier, annotated examples of doing
+some things using RwxWidgets. We try to describe
+the thought process about some of the tasks and
+the approaches we used.
+
+<dl>
+  <dt>
+  <li> Drag and Drop  <a href="DragNDrop.xml">XML</a>, <a  href="DragNDrop.html">HTML</a>,<a href="DragNDrop.pdf">PDF</a>
+  <dd> The basics of drag and drop and an more involved, dynamic
+    example in which we determine the suitablility of a drop target
+    based on the content and not the type of the data being dragged.
+    This also shows how we can implement a derived C++ class with R
+    functions as methods.
+      
+  <dt>
+  <li> Menu  <a href="menu.xml">XML</a>, <a  href="menu.html">HTML</a>,<a href="menu.pdf">PDF</a>
+  <dd>  An example of creating a wxMenuBar with different menus and 
+       and cascading menus within those. This also illustrates how to
+       handle events on menus and for collections of menu items using a
+     range of widget ids.
+
+  <dt>
+  <li> Extended C++ classes with R methods <a href="RC++Methods.xml">XML</a>, <a  href="RC++Methods.html">HTML</a>,<a href="RC++Methods.pdf">PDF</a>
+  <dd> This illustrates how we can create instances of derived C++
+  classes and implement its methods with R functions. The example uses
+    the wxDir class and the wxDirTraverser interface in C++ for
+  working with files and directories.
+
+  <dt>
+  <li> A basic wxTreeCtrl example <a href="treeCtrl.xml">XML</a>, <a  href="treeCtrl.html">HTML</a>,<a href="treeCtrl.pdf">PDF</a>
+  <dd>  This illustrates how to do basic things with the wxTreeCtrl
+  class and the associated wxTreeItemId objects.  We change the
+    background and foreground colors and  and set images on some of
+  the items.
+
+  <dt>
+  <li> Displaying an XML document with a wxTreeCtrl widget <a href="treeCtrl.xml">XML</a>, <a  href="treeCtrl.html">HTML</a>,<a href="treeCtrl.pdf">PDF</a>
+  <dd> This displays the nodes of an XML tree in a wxTreeCtrl.
+      
+  <dt>
+  <li>  Working with wxImageList  <a href="wxImageList.xml">XML</a>, <a  href="wxImageList.html">HTML</a>,<a href="wxImageList.pdf">PDF</a>
+  <dd>  This shows how to create images/bitmaps in R using wxWidgets
+    and managing these in a wxImageList which can be used in widgets
+    such as wxNotebook, wxTreeCtrl, wxListCtrl, etc.
+
+  <dt>
+  <li> Adding widgets to a wxDialog <a href="multiChoiceDialog.xml">XML</a>, <a  href="multiChoiceDialog.html">HTML</a>,<a href="multiChoiceDialog.pdf">PDF</a>
+  <dd>
+
+  <dt>
+  <li> Building a wxDialog from scratch. <a href="RwxDialog.xml">XML</a>, <a  href="RwxDialog.html">HTML</a>,<a href="RwxDialog.pdf">PDF</a>
+  <dd>
+      
+  <dt>
+  <li> Hiding/Showing widgets within a wxSizer <a href="sizerShow.xml">XML</a>, <a  href="sizerShow.html">HTML</a>,<a href="sizerShow.pdf">PDF</a>
+  <dd>
+
+
+</dl>
+<p>
+
+We write these documents using an XML format that allows us to combine
+the annotation with the code and read them in various formats. We use
+the <a href="http://www.docbook.org">Docbook</a> format for marking up the text and inserting the code and
+use XML and XSL to process the document in R and externally to work
+with the code and create documents.
+We have added our own XML elements and use the namespaces
+http://www.r-project.org and http://www.omegahat.org to identify
+these elements.
+
+<p>
+One can browse these documents directly in a good Web browser
+as they have the associated XSL stylesheet referenced within them.
+One can also use XSL to convert them to HTML or PDF (via FO)
+and indeed one can convert them to LaTeX and then process them
+via that tool chain.
+
+<p> And one can read and execute the code in R directly from the
+document using the <a href="http://www.omegahat.org/RSXML">XML
+package</a> and the function <code>xmlSource()</code>
+available from
+<a href="http://www.omegahat.org/xmlInternalSource.R">xmlInternalSource.R</a>.
+You can load this into R using
+<pre class="rcode">
+source(url("http://www.omegahat.org/xmlInternalSource.R"))
+</pre>
+and then use it with, e.g.
+<pre class="rcode">
+xmlSource("http://www.omegahat.org/RwxWidgets/ExampleDocuments/menu.xml")
+</pre>
+or
+<pre class="rcode">
+xmlSource(""http://www.omegahat.org/RwxWidgets/ExampleDocuments/DragNDrop.xml", xpath = "//r:example[@id='DynamicDnD']")
+</pre>
+
+
+
+
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Sat Jun  9 16:14:52 PDT 2007
+<!-- hhmts end -->
+</body> </html>

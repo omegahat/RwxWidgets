@@ -1,0 +1,17 @@
+htmlwin.so:
+
+%.o: %.cpp
+	g++-4.0 -arch i386 -I/usr/local/lib/wx/include/mac-unicode-debug-2.6 -I/usr/local/include/wx-2.6 -D__WXDEBUG__ -D__WXMAC__ -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -DNO_GCC_PRAGMA -msse3 -fPIC -g -O2 -march=pentium-m -mtune=prescott -I/Library/Frameworks/R.framework/Resources/include -I/Library/Frameworks/R.framework/Resources/include/i386 -c $< -o $@
+
+htmlwin.so: htmlwin.o
+	    R CMD SHLIB htmlwin.o
+
+simple.so: simple.o
+	    R CMD SHLIB simple.o
+
+simpleApp.so: simpleApp.o
+	    R CMD SHLIB simpleApp.o
+
+
+#	g++ -flat_namespace -bundle -undefined suppress -L/usr/local/lib -o htmlwin.so htmlwin.o -L/usr/local/lib  -framework QuickTime -framework IOKit -framework Carbon -framework Cocoa -framework System  -lwx_macud_xrc-2.6 -lwx_macud_qa-2.6 -lwx_macud_html-2.6 -lwx_macud_adv-2.6 -lwx_macud_core-2.6 -lwx_base_carbonud_xml-2.6 -lwx_base_carbonud_net-2.6 -lwx_base_carbonud-2.6   -L/Library/Frameworks/R.framework/Resources/lib -lR
+

@@ -1,0 +1,161 @@
+<article>
+
+<section>
+<title>
+</title>
+We discuss here approaches for the basic architecture of the
+R-wxWidgets interface.
+
+<para/>
+We have an interactive, command line language in R and so
+we are not running a single program. The style of extending
+the wxApp application is not one that is appropriate for R.
+(We can and do however support this approach as it
+may become useful when we have R executables.)
+We do define and create an instance of RwxApp class
+which extends wxApp in C++.
+
+
+<para/>
+
+The user can the create top-level windows
+(e.g. Frames) and populating them with buttons,
+grids, menus, etc. and generally use any of the widgets
+
+<para/>
+
+We can create new "classes" from these base widgets by defining
+extended classes with fields for R functions that are used to
+implement the methods.  If the field is non-NULL, then the value is
+expected to be an R function that can be called by the proxy method
+for that original, base method.  If the function is not present, then
+we call the original, inherited method.
+
+This is dynamic class definition without a formal specification.  One
+can change methods on the fly.  All of this is done by defining one
+new C++ class for each base class and adding fields
+
+We need a way for the R function to be able to call
+the original method without returning to this new method
+and so getting into an infinite loop.
+
+We need a mechanism to deal with overloading/polymorphism.
+For example, we need to be able to specify the
+signature of the method for which the R method is
+being provided. 
+We can use a form of name mangling 
+to identify the 
+method.
+idenfity each metho
+
+We also need a way to handle default arguments.
+
+
+
+
+
+
+
+
+<section>
+<title>Event Handlers</title>
+
+The event handlers are typically specified as R functions.
+(It is possible to specify a native (C) routine
+or perhaps even a C++ object and routine, but we will deal with that extension later.)
+There are two ways to implement the R function event handlers.
+One is to use the Connect() routine 
+of the source (or an ancestor) of the event.
+We specify the source of the event in which we are interested
+via the object's id, the event identifier (e.g. button clicked)
+and the R function to use as the callback.
+The internal code then creates an R_wxEventHandler which then stores
+the R function and register its invoke method as the
+callback routine for the C++ code.
+This is done using the eventSink argument of the 
+Connect method. This allows us to specify the
+C++ object whose method is to be invoked
+as the event handler.
+This is how we get the R_wxEventHandler object
+passed as the 'this' in the call to the
+R_wxEventHandler::invoke method.
+
+To disconnect, we need the entire collection of information.
+This is returned in the handler object created in the call to
+Connect.
+
+<section>
+<title>An Alternative Static Approach</title>
+A different approach is to define sub-class 
+of the wxWindow type in which we are interested
+and have that handle the events for us.
+For example, if we want to work with a
+button (wxButton) and want to handle its
+click events, we
+can define a new class R_wxButton
+which extends wxButton.
+This new class has a field for storing the
+event handler and also a method for invoking the event handler.
+We can the statically declare the event table for this class.
+See RwxButton.h
+
+This is not a desirable way to arrange the event handling
+for R. The dynamic mechanism described first is preferable.
+</section>
+</section>
+
+
+<section>
+<title>Event Loop</title>
+
+The event loop is typically controlled in wxWidgets by the wxApp or
+derived class.  It is there that the different methods for processing
+the events on the event loop are defined. We can override these and
+attempt to integrate them with R's event loop.  Of course, it is much
+easier to have a single event loop and put R's event loop under that
+of GUI.  This way we would get To do this, we need to develop a GUI
+that people find acceptable on various platforms.  One benefit is that
+we get events on input streams and also timers, as we introduced with
+the REventLoop package.
+
+In the absence of this, and 
+
+</section>
+
+
+<section>
+<title>HTML Widget</title>
+
+<section>
+<title>Our own TAGs</title>
+
+In interactive documents, we use special tags to identify embedded
+objects within the HTML source to create parameterized components
+which display different content and provide interactive controls.
+
+We might have something such as
+&lt;object type=""&gt;
+ 
+&lt;/object&gt;
+
+or even a higher level  concept 
+such as
+&lt;gui&gt;
+ 
+&lt;/gui&lt;
+
+
+The parser in the wxHTML system maintains a list of 
+handlers for different tags (not unlike one of the XML parsing
+mechanism in R).
+We need to add our specialized handlers for new tags to the parser.
+We can do this statically by defining a new <cplusplus/> class.
+More typically, however, we want to do this dynamically within
+R.
+
+
+</section>
+
+</section>
+
+</article>

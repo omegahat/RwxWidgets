@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<article>
+The wxBitmap  constructor using the file name and image type 
+   (const wxString &, long)
+needs to be const (wxString &, wxBitmapType) or else we end up
+with a call to the wrong constructor. There is something with the 
+compiler missing this.
+And sure enough, if we change the definition to long and not wxBitmapType
+in wx/gtk/bitmap.h, then the compiler gives an error saying that there
+is ambiguity eventhough it knows what to do.
+
+But we can get this type from the TU file. It is the documentation that is wrong.
+
+
+
+
+For version 2.8.4, we had to
+
+ RwxColour, RwxWindow, RwxTreeCtrl
+     use a const for variables that might be assigned on of the builtin colours
+ RwxFileDialog_class, testFileDialog
+   The wxFileDialog::OnOk method is no longer present.
+    (Was this actually being invoked by wxWidgets when the event occurred.)
+
+ The event handling mechanism doesn't work.
+   The event identifiers are not the same across versions.
+ 
+ The enums, etc. probably need to be regenerated.
+
+Done July 11.  See r:frag id="globals" in run.xml.
+
+ Windows don't appear automatically without a push from wxEventLoop()$Run.
+ Needed to add a call to gdk_flush. We'll see what happens on CarbonEL
+
+<note>
+Generally (for both versions)
+
+Compiler is not picking up differences between
+  type *x
+and
+  type &x
+
+and allowing us to pass the pointer value through.
+</note>
+
+</article>

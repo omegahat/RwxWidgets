@@ -1,0 +1,700 @@
+<article  xmlns:r="http://www.r-project.org">
+<section>
+<title>Using the wxHTML widget</title>
+
+One of the important components of the wxWidget toolkit from our
+perspective is the wxHtmlWindow widget and support for displaying HTML
+in a customizable way.  We make use of this in the StatDocs project
+and for creating dynamic, interactive documents in which the reader
+can control the calculations and perform "what if" alternatives.  The
+wxHtmlWindow and associated wxWidgets classes are quite flexible.  We
+can specify handlers for the parser to use for existing HTML tags and
+also for new tags that are not part of the HTML specification but that
+we make up and include in our documents, e.g. slider, Rdevice, rplot,
+rtable.  We can process these tags as the document is being parsed and
+insert arbitrary content into the document to be displayed in its
+place, either text or widgets.  This makes the content dynamic,
+i.e. we compute it at run-time.  This content can even include
+arbitrary widgets/GUI controls.  It is this that allows the content to
+be interactive.  This is like what we did with SNetscape, having R
+embedded inside the Web browser and processing OBJECT tags. However,
+this is done entirely within R and simplifies the installation,
+etc. and works on various platforms.  Of course, the HTML widget is
+not as full-featured as a regular browser, not supporting CSS, frames,
+and certain "advanced" HTML tags, etc.
+
+<para/>
+
+In this article, we will outline the basic steps and pieces in the
+RwxWidgets for working with the wxHtmlWindow and its documents.  Some
+of these facilities come directly from wxWidgets, and others are
+higher-level or value-added functionality that we have provided within
+R.
+
+<para/>
+One can create a GUI using an HTML document with tags that will be
+converted into GUI controls. Such documents are a nice way to mix the
+controls with text in a reasonably easy way to edit and layout.  One
+can change the text and and the controls and re-display the document.
+The alternative is to create a regular GUI and insert the elements
+into containers and specify how they are to be resized.  This is more
+complex, at least initially, for many people.  However, it is more
+flexible as the resizing of the top-level window does propogate to the
+GUI's elements. So the two approaches are different and should be used
+appropriately.
+
+</section>
+
+<section>
+<title>An example</title>
+Let's think about a reasonably simple example
+of a document which describes the ideas of the Central Limit Theorem.
+We would have a description of the idea,
+perhaps a statement of the theorem in mathematical form
+and then an example of where we sample from a population
+and see how the distribution of the mean changes as the sample size
+increases.
+To make things slightly more interesting for the student, we
+might add a section that allows them to specify the
+sample size and population distribution
+and the statistic of interest, e.g. the median rather than the mean.
+We want to engage the reader so we give them these interactive 
+controls and hope that they will explore different aspects of the
+theory.
+
+<para/>
+We can create the first part - the non-interactive aspect - as regular
+HTML. We could create the plots of the population density and the sample
+mean distributions for different sample sizes as JPEG images from
+within R and then have them displayed in HTML using &lt;img
+src="filename.jpg"&gt; elements in the HTML document.  But these would be
+fixed images and not dynamically updating. The interactive
+component requires a little more work but we can think about it in two
+different ways.
+<para/>
+
+We want a choice menu for the selection of the statistic, and
+similarly for the choice of population distribution from a fixed
+set. (We may want to allow a free form R expression, but we'll return
+to that later.)
+ We might have a text field to
+specify the sample size, or more interestingly a spin box which would
+constrain the content.
+And we want to display the density of the population and
+also the sampled values as R plots. 
+We could put these in two plots in the same R graphics device
+using <r:expr>par(mfrow = c(1, 2))</r:expr>, for example.
+Alternatively, we could put them in separate,
+independent graphics devices.
+And, regardless of which approach, the device(s) needs to be inside
+the HTML window as part of the display and not a stand-alone window.
+
+<para/>
+If we don't get too ambitious with the controls (e.g. using a spin
+box), we can use a simple HTML form to provide the choice menus via
+the SELECT &amp; OPTION elements.  And we can use a TEXTAREA element
+to allow the specification of the sample size.  And we have a button
+to perform the updates, although we may want the display to be updated
+whenever any of the inputs change.
+
+<para/>
+The graphics devices are a little trickier because clearly there is no
+HTML tag for an R graphics device.  So we have to add our own
+mechanism for embedding an R graphics device within an HTML window.
+How do we do this?  There are two approaches.  One is to introduce or
+make up our own HTML tag such as &lt;Rdevice&gt; to identify an
+embedded R graphics device.
+Unfortunately, if we present this document to another
+HTML viewer, e.g. a Web browser, it will not understand
+this tag and so not process it correctly,
+typically just ignoring the instructions and inlining the node as regular text.
+So things will still work, just not as we intended.
+
+<para/>
+
+A more general approach is to use the more generic &lt;OBJECT&gt; tag
+that HTML provides.  This says that the content is creating an
+embedded object within the document and that the details of how to
+handle are left to the application and are based on the attributes and
+content of the HTML element.  We specify the type of embedded object
+via the type attribute which specifies the MIME type of the target
+application.  Well, of course, we don't have an official MIME type for
+an R graphics device, so we make one up and try to ensure that it
+doesn't conflict with an actual, official MIME type.  So, following
+the guidelines for this, we use a MIME type value with a prefix of
+"app/x", e.g.  "app/x-R-device".
+
+<para/>
+We can specify the dimensions for the device in either approach using
+attributes.  And we can specify code to create the initial contents or
+do any other R calculations within a child of either the Rdevice or
+OBJECT tag.  So either approach works just fine.  We might prefer one
+over the other based on whether we think the document will be viewed
+only in R (use Rdevice) or more generally in other browsers (use
+OBJECT).  But the OBJECT approach will work for either and so may be
+prefferable, but it is a marginal decision.
+
+
+<para/>
+Suppose we want to use the 
+&lt;Rdevice&gt; approach.
+In our document, we might have 
+<literallayout>
+<![CDATA[
+<Rdevice name="population" width="300" height="300">
+ curve(rnorm(x, 0, 1), -3, 3, col = "red")
+</Rdevice>
+]]>
+</literallayout>
+This says to create an R graphics device embedded within the document
+at this location within the document and that it should be 300 x 300
+pixels in dimension.  We also want to be able to refer to it as the R
+variable <r:var>population</r:var>. And finally, we want the initial
+display on the device to be a normal density created with the R
+expression.
+
+<para/>
+
+It is the parser that will see this HTML text and we need to help it
+to understand what we want to have happen. To this end, we have some
+facilities in R that make this relatively easy. But they sit on
+lower-level facilities provided by wxWidgets.  Let's look at these
+lower-level facilities first and then see how we have made it slightly
+simpler in R.
+
+<para/>
+When we create a wxHtmlWindow object, we can ask it for the associated
+HTML parser that is specific to that window.  The method
+wxHtmlWindow_GetParser() does this for us:
+<r:code>
+  html = wxHtmlWindow(parent, wxID_ANY)
+  parser = html$GetParser()
+</r:code>
+Now, we want to tell the parser that whenever it sees the tag
+&lt;Rdevice&gt;, it should call a function we give it to create the
+embedded object. The function will find all the specifications from
+the HTML element and its child nodes and create the graphics device
+and insert it into the target HTML window.  The parser doesn't need to
+know anything about the tag or what the function does, but will simply
+hand control over to our function and expect things to be done for it.
+The function should return <r:true/> or <r:false/> to indicate success
+or failure.
+
+<para/>
+We need to write the function and then tell the HTML parser to use it
+for each &lt;Rdevice&gt; node it sees.  Let's assume we have written
+the function and called it <r:func>RdeviceHTMLHandler</r:func>.  Then,
+to connect it to the Rdevice nodes for the parser, we have to create
+and register a wxHtmlTagHandler.  This is a C++ class that wxWidgets
+provides.  The idea is that we create an instance of such a class with
+the name of the HTML node(s) that it can handle and then register it
+with the parser.  When the parser encounters a node, it finds the
+relevant handler and calls its HandleTag() method.  Now, we need it to
+call our R function, so our instance of the wxHtmlTagHandler class
+needs to be slightly different from a standard C++ handler.  Its
+HandleTag() method in C++ needs to invoke our R function.  To do this,
+we have a new C++ class named RwxHtmlWinTagHandler that inherits from
+wxHtmlTagHandler and provides a different implementation of the
+HandleTag() method. It just calls the R function that we specified
+when we create an instance of this RwxHtmlWinTagHandler class.  So we
+create an instance of this new type of handler and then add it to the
+parser.  We do these two steps with the R code
+<r:code>
+handler = RwxHtmlWinTagHandler("Rdevice", RdeviceHTMLHandler)
+parser$AddTagHandler(handler)
+</r:code>
+Now, when the parser encounters an &lt;Rdevice&gt; node in the HTML
+document, it will call our <r:func>RdeviceHTMLHandler</r:func>.
+
+<para/>
+
+So what should this handler function look like?  Firstly, it will be
+called with three arguments: the wxHtmlTagHandler object
+itself that we created, the object representing the HTML tag that we
+are to process, and lastly the parser object.  So our function should
+be defined as
+<r:code>
+RdeviceHTMLHandler =
+function(h, tag, parser)
+{
+
+}
+</r:code>
+We typically don't make much use of the handler in R.  It is the tag
+and the parser we work on.  In C++, we might have stored additional
+information in the handler object that is need to process the
+HandleTag operation. But in R, we typically use closures to trap that
+information in the environment of the R function that implements the
+HandleTag method.
+
+<para/>
+Now, what should this function do?  It should create a new graphics
+device that is embedded within the HTML document.  We use the
+<r:pkg>RwxDevice</r:pkg> package for this, so we need to ensure that
+it is loaded via a call <r:expr>library(RwxDevice)</r:expr>.
+
+<para/>
+Next, we create the device via a call to <r:func>RwxCanvas</r:func>.
+That function needs the parent widget for the new device canvas and
+the parent should be the HTML window associated with the HTML parser.
+We don't have direct access to that, but we can access it via the
+parser with the call <r:expr>parser$GetWindow()</r:expr>.  So we can
+create our new canvas for the device with
+<r:code>
+ canvas = RwxCanvas(parser$GetWindow())
+</r:code>
+
+We'll come back to providing information about the size of the canvas.
+
+<para/>
+After we have created the canvas on which R might draw plots, we need
+to tell R that it can be used as a regular graphics device.  We call
+the function <r:func>asWxDevice</r:func> to do this, passing it the
+newly created canvas object.
+
+<para/>
+And the last step is to put the canvas into the appropriate
+place in the HTML document. The canvas has the HTML window
+as its parent, but it doesn't know where to locate itself.
+That is the job of the layout of the document. So, we call
+<r:func>insertEmbeddedComponent</r:func>, giving
+it the <r:var>canvas</r:var> and the <r:var>parser</r:var>.
+It then arranges to put the widget into the right place,
+enclosing it in a wxHtmlWidgetCell object.
+
+<para/>
+At this point, we have the basic graphics device.
+The code for the handler is 
+<r:code>
+RdeviceHTMLHandler =
+function(h, tag, parser)
+{
+ library(RwxDevice)
+ canvas = RwxCanvas(parser$GetWindow())
+ asWxDevice(canvas)
+ insertEmbeddedComponent(canvas, parser)
+
+ TRUE
+}
+</r:code>
+Note that we return <r:true/> to indicate that we successfully
+processed the tag.  If we wanted, we could return the canvas object
+and the internal handler code would take care of calling
+<r:func>insertEmbeddedComponent</r:func> (or doing it internally,
+actually).
+
+<para> One piece that we have omitted is that we have not dealt with
+the width and size attributes or the name, and we also want to process
+the R code within the &lt;Rdevice&gt;.  Let's start with dimensions.
+</para>
+
+<para>
+We need to ask the HTML tag object (<r:var>tag</r:var>) whether it has
+a width or a height attribute.  The <r:var>tag</r:var> object is an
+instance of the <wx:class>wxHtmlTag</wx:class> class in wxWidgets and
+has several methods for accessing its information. See the
+documentation.  We can use <r:expr>tag$HasParam("width")</r:expr> to
+see if it has an attribute/parameter named "width".  If this returns
+<r:true/>, we get the value with
+<r:expr>tag$GetParam("width")</r:expr> and the coerce it to an
+integer.  Since the values are expected to be numbers, we can also use
+<r:func>getParamNumber</r:func> and provide a default value and a
+method to coerce the string value if it is present to the target type,
+an integer.
+<r:code>
+getParamNumber(tag, "width", -1, as.integer)
+</r:code>
+Note that when we use -1 for a size dimension, wxWidgets
+will understand that as a default value and determine the
+correct value rather than interpreting that value literally
+as a dimension!
+</para>
+
+<para>
+So we can change our function slightly to use any 
+width and height attributes as
+<r:code>
+ sz = c(getParamNumber(tag, "width", -1), getParamNumber(tag, "height", -1))
+ canvas = RwxCanvas(parser$GetWindow(), size = sz)
+</r:code>
+</para>
+<para>
+We can deal with a name attribute also by checking if it
+was provided in the HTML tag and if so, accessing its value.
+<r:code>
+ if(tag$HasParam("name")) 
+    name = tag$GetParam("name")
+</r:code>
+</para>
+
+<para>
+Now the question is what we do with it.  The intent is that we assign
+the value of the local <r:var>canvas</r:var> variable to a globally
+accessible variable identified by the value of the "name" attribute,
+e.g. <r:var>population</r:var> in our example.
+We do this in our function as
+<r:code>
+ if(tag$HasParam("name")) 
+    assign(tag$GetParam("name"), canvas, globalenv())
+</r:code>
+Precisely where we want the assignment to be done, i.e.  in which
+environment or symbol table is something we will talk about much
+later.  Our code above puts it into our work session. If we have two
+HTML windows each of which has a device with the same name,
+e.g. displaying the same document, we will have problems.  Or if we
+already have a variable with a name the same as the value of the
+"name" attribute, it will be overwritten!!  So we need to allow each
+window have its own private space for these variables and arrange for
+the code to look for them appropriately. More on this later.
+</para>
+
+<para>
+The last bit of work we have to do is to collect up the text within
+the &lt;Rdevice&gt; node and treat it as an R command.  The code might
+be to produce an R plot, or might do some behind the scenes work such
+as registering an event handler on the device, etc.  From the point of
+view of our tag handler function, we don't care what the code does; we
+just want to evaluate it as a regular R command.  But it is not being
+typed at the R prompt or source()'d in from a file. So we need a new
+mechanism.
+<para/>
+Firstly, we can get the text in the tag using
+<r:code>
+ txt = tag$GetContent(parser)
+</r:code>
+This a convenience function provided by <r:pkg>RwxWidgets</r:pkg>
+which does several low-level operations.
+The result is that, in our example, <r:var>txt</r:var> contains the 
+string 'curve(rnorm(x, 0, 1), -3, 3, col = "red")'
+</para>
+
+<para>
+We want to evaluate this as if it were typed at the R prompt.  To do
+this, we must first parse it to verify that it is a legal command and
+to turn it into something R can evaluate.  Then we can evaluate it.
+We do this with the code
+<r:code> 
+  expr = parse(text = txt)
+  eval(expr, globalenv())
+</r:code>
+</para>
+
+<para>
+Note that we have to tell R "where" to evaluate the expression and we
+use <r:func>globalenv</r:func> for convenience. This controls to what
+variables this expression can refer. For example, if it needed to see
+the <r:var>canvas</r:var> variable, it would not be able to see it as
+that is local to the particular call of our handler function.  But
+there are ways to tell <r:func>eval</r:func> where it should evaluate
+the expression so that it could see the variables in our function
+call.  But then we would have to agree with the users about the names
+for identifying the different variables.  In this case, if the user
+wants to refer to the RwxCanvas object, she should use a "name"
+attribute and we should assign the object to that name before
+evaluating the code in the body of the tag.
+</para>
+
+<para>
+Let's put all this together.
+<r:code>
+RdeviceHTMLHandler =
+function(h, tag, parser)
+{
+ library(RwxDevice)
+
+ sz = c(getParamNumber(tag, "width", -1), getParamNumber(tag, "height", -1))
+ canvas = RwxCanvas(parser$GetWindow(), size = sz)
+
+ asWxDevice(canvas)
+ insertEmbeddedComponent(canvas, parser)
+
+ if(tag$HasParam("name")) 
+    assign(tag$GetParam("name"), canvas, globalenv())
+
+ txt = tag$GetContent(parser)
+ if(nchar(txt)) {
+    expr = parse(text = txt)
+    eval(expr, globalenv())
+ }
+
+ TRUE
+}
+</r:code>
+Then, we register this function with the parser as
+<r:code>
+  html = wxHtmlWindow(parent, wxID_ANY)
+  parser = html$GetParser()
+
+  handler = RwxHtmlWinTagHandler("Rdevice", RdeviceHTMLHandler)
+  parser$AddTagHandler(handler)
+</r:code>
+The string "Rdevice" specifies the name of the HTML nodes this can process.
+</para>
+
+<para>
+
+There is a slightly simplified way to do the last part of this.  The
+function <r:func>createHtmlViewer</r:func> in
+<r:pkg>RwxWidgets</r:pkg> arranges to create an HTML windget and load
+a document.  And it also takes a list of tag handlers.  We can use
+this as
+<r:code>
+createHtmlViewer("myDoc.html", win, 
+                  tagHandlers = htmlTagHandlers(list(Rdevice = RdeviceHTMLHandler)))
+</r:code>
+It doesn't save us much effort, but is somewhat convenient.
+</para>
+
+
+<section>
+<title>The OBJECT approach</title>
+<para>
+If we were to be well-behaved HTML citizens and create proper HTML, we
+would use the OBJECT tag to identify our R graphics device.  Our HTML
+node would look like
+<literallayout>
+<![CDATA[
+<OBJECT type="app/x-R-device" width="300" height="300">
+ <PARAM name="init" value="curve(rnorm(x, 0, 1), -3, 3, col = 'red')"/>
+</OBJECT>
+]]>
+</literallayout>
+</para>
+
+<para>
+The same information is present but the type of the object is now no
+longer in the tag name but in the type attribute.  And the
+initialization code is explicitly in a child node named PARAM with
+name and value attributes.  This is all very general and so HTML can
+support arbitrary embedded OBJECTs, but it is not necessarily very
+convenient.
+</para>
+
+<para>
+This generality means that an HTML parser may have to deal with
+numerous types of object nodes. So we can provide a simple tag parser for the
+generic OBJECT tag, and then find the value of the type attribute.
+Then we can use that to find the relevant tag handler function for the
+tag (OBJECT, type) pairing.  We provide that in our
+<r:func>createHtmlViewer</r:func> function via the
+<r:arg>tagHandlers</r:arg> argument and the
+<r:func>htmlTagHandlers</r:func> function.  If we have a handler
+function, say named foo, to handle this (OBJECT, "app/x-R-device")
+pairing, we can register it to be called with
+<r:code>
+createHtmlViewer("myDoc.html", win, 
+                 tagHandlers = htmlTagHandlers(objectHandlers = c(defaultObjectHandlers(), 
+                                                                  "app/x-R-device" = foo)))
+</r:code>
+Then when the parser encounters an OBJECT node in the HTML content, it will call
+a generic R function to process the node via the  HandleTag method
+of an RwxHtmlTagHandler object we registered for the "object" nodes.
+That function then looks up its list of type-specific handlers
+for app/x-R-device and finds foo and calls it.
+</para>
+
+<para>
+Now that we can arrange to be invoked, how do we actually perform the
+processing of the node.  Again, our function is called with the
+handler, the tag and the parser, and, importantly, also an
+environment.  And our function has to create the graphics device, etc.
+That code is essentially unchanged.  The only potentially difficult
+aspect is how we process the &lt;PARAM&gt; sub-node so that we can
+evaluate the initialization code.  When we had this in the
+&lt;Rdevice&gt; tag, we specified the format as free-flowing text.
+Now we are dealing with a structured HTML node as the content or inner
+part of the tag we are handling.  So we need to deal with it more
+carefully; we can't just suck it up as raw text.
+</para>
+
+<para>
+There are two ways to go about this.  The first approach is to walk
+the children (just one in this case) and process the sub-nodes
+recursively.  We'll assume that the variable <r:var>tag</r:var> is the
+top-level &lt;OBJECT&gt; node.  We ask it for its children with the
+function <r:func>wxHtmlTag_GetChildren</r:func>.
+<r:code>
+ kids = tag$GetChildren(TRUE)
+</r:code>
+This returns a list with an element for each direct child under this
+tag.  Then, we can process each of those.  In our example, we will
+have a single node corresponding to the &lt;PARAM&gt; node.  Then, we
+can access its attributes using
+<r:code>
+ if(kids[[1]]$GetParam("name") == "call")
+     eval(parse(text = kids[[1]]$GetParam("value")))
+</r:code>
+There are helper functions in the file htmlTagHandlers.R in the
+RwxWidgets that help with this,
+e.g. <r:func>getCallParameter</r:func>,
+<r:func>getCallbackParam</r:func> and also show how to do the
+processing of the node..
+</para>
+
+<para>
+The approach of recursively processing the sub-nodes is perfectly
+natural.  It is a little cumbersome if we already have general
+top-level tag handlers for nodes that might appear as sub-nodes.  For
+example, suppose we register tag handlers for "button" and within our
+Rdevice node we also allow a "button" node. If we are recursively
+processing the nodes by hand, then we have to replicate the tag
+handler code or arrange to call our original handler's function.  A
+different approach would be to tell the parser to continue to process
+all of the sub-nodes under this node that we are currently handling
+and to stop when it has finished just those nodes.  The parser would
+then do this using the registered handlers and we would get control
+back at the end of that sub-parsing step.  If we arrange for those
+general handlers to store their information somewhere that we can
+access, then we have essentially picked up all the information from
+the sub-nodes without having to manually navigate the nodes.  The way
+we case this sub-parsing to happen is by calling the tag handler's
+ParseInner() method on the specified tag.
+<r:code>
+function(handler, tag, parser)
+{
+   handler$ParseInner(tag)
+}
+</r:code>
+</para>
+
+<para>
+The code in <r:func>htmlFormTagHandlers</r:func> provides an example
+for using this approach, in particular the handlers for the tags
+&lt;FORM&gt; and &lt;SELECT&gt;.
+</para>
+</section>
+
+</section>
+
+<section>
+<title>Connecting the pieces</title>
+<para>
+So now we have seen how to add new tag handlers
+for the HTML parser and we have been able to provide a way for creating
+the R graphics device using &lt;Rdevice&gt; or
+&lt;OBJECT&gt; nodes in the HTML.
+</para>
+
+<para>
+Our example was to provide two different choice menus, one for the
+choice of distribution and one for the statistic of interest, and a
+text control for specifying the sample size.  We can do this entirely
+with form elements since the type of controls are quite simple and
+available in the HTML form specifications.
+</para>
+
+<para>
+The HTML is given by
+<![CDATA[
+
+]]>
+</para>
+
+<para>
+Now, when the user clicks on the "Simulate" button, the form is
+"submitted" with the relevant values.  If there is an R expression
+provided as an attribute for the &lt;form&gt; node, then that
+expression is evaluated with three variables made available to it as
+<r:var>form</r:var>, <r:var>params</r:var> and <r:var>values</r:var>.
+The first of these gives the object representing the form and its
+components, default values, etc.  The second may not be set at this
+point and is character vector.  And the last of these gives us a list
+of the name-value pairs for the selected settings.  So, we can add an
+"onsubmit" attribute which contains the R code to do the simulation
+and update the sample histogram.
+<r:code>
+ n = as.integer(values[["sampleSize"]])
+ f = populations[[values [["distribution"]] ]]
+ stat = statistics[[ values [[ "statistic" ]] ]]
+ x = replicate(1000, stat(f(n)))
+ sampleDist$hist(x)
+</r:code>
+</para>
+
+</section>
+
+<section>
+<title>The General Rules</title>
+
+If we decide that we want to process content dynamically within an HTML document
+and we are starting from a clean slate, we have several choices.
+We can 
+<itemizedlist>
+<listitem>introduce a new HTML tag, e.g. Rdevice, slider, Rplot, data.
+This can have its own attributes and sub-nodes which the author can use to
+parameterize the actions taken to process the node.
+We add a new RwxHtmlTagHandler to process such a node.
+</listitem>
+<listitem>
+use an OBJECT node with a new value for the type attribute.
+We can add an R function to the general list of 
+OBJECT handlers.
+</listitem>
+<listitem>
+use an OBJECT node with the general type app/x-R-command
+which treats the content of the OBJECT node as R code
+and evaluates that.
+</listitem>
+<listitem>
+use a new HTML node name but accept arbitrary R code within 
+that node.
+</listitem>
+</itemizedlist>
+
+<para>
+</para>
+<para>
+To implement the new node/general R code, we can reuse the existing
+handler for the app/x-R-command OBJECT type.
+For example, suppose we introduce a new node named rinit which 
+is used to evaluate code to create and initialize R variables, then we 
+might specify this as
+<r:code>
+htmlTagHandlers(list(init = .HTMLObjectTypeHandlers[["app/x-R-command"]]))
+</r:code>
+</para>
+</section>
+
+<section>
+<title>Environments</title> We mentioned earlier that when we evaluate
+arbitrary code from an HTML document, we typically do not want it to
+use the session's global environment to assign values for use in
+subsequent functions and code.  Rather, we want the code associated
+with a document to have its own evironment.  Additionally, we may want
+the handler functions for special HTML tags/elements/nodes to 
+have a shared state where they can work on common, mutable
+objects. For example, <fix/>
+
+<para>
+Basically, for functions we specify ourselves, we can arrange to have
+a shared environment by either explicitly setting the environment on
+each function or implicitly by creating them via lexical scoping,
+i.e. defining the related functions within the same function call.
+Then we can populate this environment with shared variables and the
+functions can get and set their values.
+</para>
+
+<para>
+When we are evaluating arbitrary R code within a function, then we
+need to know in which environment we should evaluate that code so that
+it can access these variables.  By default, we use the global
+environment. That can be appropriate, but often isn't.
+For a handler function we create ourselves, we can find the
+environment of that function when it is being called
+with 
+<r:code>
+environment(sys.function())
+</r:code>
+For 
+</para>
+
+<para>
+Often, the arbitrary R code that we want to evaluate needs access to
+the wxHTMLParser object. We make this available by assigning it to the
+variable <r:var>HTMLParser</r:var> in a separate environment whose
+parent environment is the one given in the creation of the handlers,
+.i.e. the call to <r:func>defaultObjectHandler</r:func>.
+</para>
+</section>
+
+</article>

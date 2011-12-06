@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://www.omegahat.org/XSL/Rstyle.xsl" ?>
+
+<article  xmlns:r="http://www.r-project.org"
+	  xmlns:cpp="http://www.cplusplus.org"
+	  xmlns:xi="http://www.w3.org/2001/XInclude">
+<articleinfo>
+<author>
+   <firstname>Duncan</firstname><surname>Temple Lang</surname>
+   <affiliation>Dept. of Statistics, UC Davis</affiliation>
+</author>
+</articleinfo>
+
+<section>
+<title>Extending C++ Classes with R functions.</title>
+
+<para>
+In this article, we will see how we can create new C++ classes that
+extend a a given C++ class and have some of the new class' methods
+implemented as R functions.  This is quite powerful as it allows us to
+introduce C++ objects into an existing C++ computation and have our R
+functions invoked instead of the lower-level C++ methods.  This allows
+us to intercept certain calls and customize behaviour to our needs.
+This mechanism allows us to more rapid prototyping than in creating
+these extended classes and their methods in C++ direectly.
+Additionally, we can change the R function that implements a method at
+run time for a particular instance. Thus we have a very dynamic class
+mechanism mixed with C++'s static, strongly typed approach.
+</para>
+
+<para>
+We will look at a simple example first. It is not entirely compelling
+as we are attempting to keep things simple. But it does illustrate
+how we can use some of the non-GUI facilities in wxWidgets from within R.
+We use the wxDir class to recursively process all the files and 
+directories within that given directory.
+The Traverse method in this class does this.
+To call it, we need an implementation of
+the wxDirTraverser (abstract) class.
+For each file tha the Traverse method finds, it will call the
+wxDirTraverser's OnFile method.
+And similarly, for every directory it encounters, it will
+call the OnDir method.
+So we need to provide R functions that implement each of these.
+</para>
+
+<para>
+The C++ and R interface code is automatically generated from the definition
+of wxDir and wxDirTraverser.
+It is given at the end of this document.
+</para>
+
+<para>
+We can now see this in operation.
+<r:init>
+library(RwxWidgets)
+wxInit()
+</r:init>
+<r:code>
+d = wxDir(system.file( package = "RwxWidgets"))
+
+tt = RwxDirTraverser(function(this, filename) {
+                            cat("File:", filename, "\n")
+                            wxDIR_CONTINUE
+                           },
+                     function(this, dirname) {
+		           cat("Directory:", dirname, "\n")
+                           wxDIR_CONTINUE
+                     })
+d$Traverse(tt)
+</r:code>
+</para>
+
+<para>
+Because these are pure methods, we omit one important
+detail, specifically how we call the inherited methods.
+This arises 
+</para>
+
+</section>
+
+<section>
+<title>The Interface Code</title>
+<section><title>The R code</title>
+<r:code>
+<xi:include href="../../R/wxDirTraverser.R" parse="text"/>
+</r:code>
+</section>
+
+<section><title>The C++ code</title>
+<cpp:code>
+<xi:include href="../../src//RwxDirTraverser.h" parse="text" />
+<xi:include href="../../src//RwxDirTraverser.cpp" parse="text" />
+<xi:include href="../../src//RwxDir.cpp" parse="text"/>
+</cpp:code>
+</section>
+
+</section>
+
+</article>

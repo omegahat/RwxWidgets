@@ -1,0 +1,2 @@
+PKG_CPPFLAGS=$(shell wx-config --cflags)
+PKG_LIBS=$(shell wx-config --libs)

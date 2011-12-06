@@ -1,0 +1,2 @@
+PKG_CPPFLAGS=-fdump-translation-unit $(shell wx-config --cxxflags)
+CXX=/usr/bin/g++

@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+
+<faq xmlns:r="http://www.r-project.org">
+<question>
+For C++ routines that return actual objects and not pointers to an
+object, how do we convert the result to an R value?
+</question>
+<answer>
+If we are dealing with a simple structure with no (real) methods (it
+might have methods for special operators or constructors and
+destructors) then we can copy the value field by field to an R list,
+or an R instance of a class with the corresponding slots.
+
+<para/>
+If we are dealing with a more interesting object with actual methods,
+then it is not clear that copying the fields is the right
+approach. For one, we may omit private and protected fields.  Also,
+the object is the combination of the data and the methods and a copy
+of the data in R is not necessarily meaningful.
+<para/>
+As a result, we attempt to create a new copy of this object
+on the heap and return a reference to that.
+
+<para/>
+If there is a method in the C++ class that
+takes a single argument which is an instance of
+that class, we call that.
+
+</answer>
+
+
+<question>
+Some C++ classes have methods with exactly the same name and
+signature. The only difference is that one has the const keyword
+at the end. For example, the Inflate methods in wxRect.h 
+in the gdicmn.h file of the wxWidgets include directory is one.
+What can we do about this?
+</question>
+<answer>
+Unfortunately, the translation unit doesn't seem to make
+information about this available in the 
+different nodes describing these routines.
+
+<para/>
+At its simplest, we can discard the duplicated
+symbols after we have generated the bindings.
+See <r:func>removeDuplicates</r:func>.
+</answer>
+
+<question>
+Why can't I create an instance of classes such as wxEvent?
+</question>
+<answer>
+These are so called "pure" or abstract classes for which one cannot
+create an instance.  Some of the methods declared in the class are not
+implemented and so one cannot have an instance from this class.
+
+</answer>
+
+</faq>
+

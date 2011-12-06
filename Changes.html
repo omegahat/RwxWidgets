@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1></h1>
+
+<h2>0.5-0</h2>
+
+<dl>
+  <dt> Added
+      <ul>
+	<li> wxStaticBox
+	<li> wxMenuBar
+	<li> wxMenu
+	<li> wxMenuItem
+      </ul>
+  <dd>
+  <dt> Support for RANGE events for which one specifies the start and
+      end object ID as c(start, end) via the objId argument of wxObject_AddCallback
+  <dd>
+</dl>
+
+
+<h2>0.3-3</h2>
+<dl>
+
+  <dt>
+  <li> Support for the wxWindow_FindWindowBy{Name,Id,Label} methods.
+  <dd>
+ 
+  <dt>
+  <li> Added support for staticMethod mechanism to allow them to be
+      invoked as obj$Method(...) and have the obj dropped in the call
+      to the method.
+  <dd>  This facilitates identifying the method,
+      e.g. wxWindow_FindWindowByName can be called as
+      f$FindWindowByName() without having to remember in which  class
+      it is actually defined (i.e. wxWindow).
+
+  <dt>
+  <li> AddStretchSpacer() and AddSpacer() methods for wxSizer added.
+  <dd>      
+</dl>
+
+<h2>0.3-2</h2>
+<dl>
+  <dt> Added  R functions for wxSlider and a slider.R example in examples/
+  <dd>
+</dl>
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Sat Jun  2 10:13:09 PDT 2007
+<!-- hhmts end -->
+</body> </html>

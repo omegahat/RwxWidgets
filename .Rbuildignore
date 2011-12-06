@@ -1,0 +1,8 @@
+autoGenerate.*
+scratch.*
+.*/wxConstants$
+inst/src/wxDefines
+inst/src/wxConstants
+
+
+

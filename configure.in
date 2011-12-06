@@ -1,0 +1,63 @@
+AC_INIT(DESCRIPTION)
+
+AC_PATH_PROG(WX_CONFIG, wx-config)
+
+if test -z "${WX_CONFIG}" ; then 
+  echo "Cannot find wx-config which is used to get the configuration flags for wxWidgets."
+  echo "Make certain it is in your path and run R CMD INSTALL again, "
+  echo "or install wxWidgets (development libraries)if you haven't done so already."
+
+  exit 1
+fi
+
+
+AC_PATH_PROG(UNAME, uname)
+
+if test -n "$UNAME" ; then
+  OS_NAME=`uname`
+fi
+
+DEFINES=''
+
+if test "$OS_NAME" = "Darwin" ; then
+   DEFINES="-DNO_WX_EVENT_LOOP=1"  
+fi
+
+
+
+if test -z "$GTK_CFLAGS" ; then
+  AC_PATH_PROG(PKG_CONFIG, pkg-config)
+  if test -n "$PKG_CONFIG" ; then
+      $PKG_CONFIG --cflags gtk+-2.0
+      if test $? = 0  ; then
+          GTK_CFLAGS='$(shell ${PKG_CONFIG} --cflags gtk+-2.0)'
+          OCFLAGS=$CFLAGS
+          CFLAGS="$CFLAGS `$PKG_CONFIG --cflags gtk+-2.0`"
+          AC_TRY_COMPILE([#include <gtk/gtk.h>
+                     #include <gdk/gdkx.h>
+                    ],
+                    [
+                      int d = GDK_DISPLAY();
+                    ], DEFINES="$DEFINES -DUSE_GTK_EVENTS=1")
+          CFLAGS=$OCFLAGS
+      fi
+  fi
+fi
+
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(DEFINES)
+
+AC_OUTPUT(src/Makevars inst/src/GNUmakefile)
+
+echo "Defines: $DEFINES"
+
+if test -z "$NO_CONSTANTS" ; then
+ cd inst/src
+ make wxConstants
+ ./wxConstants > ../../R/wxConstants.R
+
+ make wxDefines
+ ./wxDefines > ../../R/wxDefines.R
+fi
+
+

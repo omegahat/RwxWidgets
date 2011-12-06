@@ -1,0 +1,1027 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="/Users/duncan/Projects/org/omegahat/Docs/XSL/article.xsl"?>
+
+<article xmlns:r="http://www.r-project.org"
+         xmlns:pl="http://www.perl.org">
+<para>
+Take an existing header file, e.g. notebook.h and create a file named
+wxNotebook.cpp, say, that simply includes that header file. Then
+create the .tu file, making certain to use the appropriate version of
+g++, i.e. 3.2 or 3.3 but not 3.4.
+</para>
+
+Load RGCCTranslationUnit.
+
+<para>
+Since this depends on RSPerl, make certain that we have set the
+relevant environment variables.  Also, make certain that we have
+installed RSPerl with support for dynamically loading the IO, Fcntl
+and Socket modules via the --with-modules argument to configure via
+the --configure-args of R CMD INSTALL.
+</para>
+<para>
+
+Now we read the .tu file into R via RSPerl using
+<r:function>parseTU</r:function>
+<r:code>
+tu = parseTU("wxNotebook.cpp.tu")
+</r:code>
+</para>
+
+<note>
+If you get a segmentation fault, that means that you don't have support
+for IO, Socket, Fcntl.
+</note>
+
+The result is an R object whose S3 class is given by
+<r:code>
+class(tu)
+<r:output>
+[1] "GCC::TranslationUnit::Parser" "PerlArrayReference"          
+[3] "PerlReference"               
+</r:output>
+</r:code>
+
+This is essentially a very large array of nodes.  The first element is
+relatively meaningless.  It is a fake entry in the node table.
+<note>
+We might discard this or make the R access to the elements skip this.
+</note>
+We can also index the elements by the node names
+from the .tu file.
+
+
+From this array, we can construct descriptions of the different elements of the code.
+There are typically two steps to this. First we get a basic description and
+then we resolve each of the different types that are referenced in the description.
+The initial basic description merely arranges the nodes into meaningful structures
+such as definitions of data structures, routines, etc. The second
+step involves resolving the types by following the node definitions
+
+
+Let's start by getting the classes in our wxNotebook.cpp code.
+<r:code>
+klasses = getClassNodes(tu)
+</r:code>
+This would get all the classes defined when processing the
+<file>wxNotebook.cpp</file> file.  But we only want the ones associated with
+notebook.h.  So we need to add a filter to ensure that we only get
+back the classes defined in that file of interest.
+<r:code>
+klasses = getClassNodes(tu, "notebook")
+</r:code>
+Note that we specify notebook without any extension
+as that introduces ambigiguities that we don't
+yet want to deal with.
+
+<note>
+Fix the filtering.
+</note>
+
+Now we can look at the classes that were discovered.
+<r:code>
+names(klasses)
+<r:output>
+[1] "wxNotebook"                   "wxGtkNotebookPagesList"      
+[3] "wxwxGtkNotebookPagesListNode" "wxNotebookEvent"             
+[5] "wxNotebookBase"              
+</r:output>
+</r:code>
+
+Note that we get some classes that are Gtk-specific since we are doing
+this on a version of wxWidgets compiled to use Gtk.
+We will want to create bindings to this that are conditional
+on using Gtk-based wxWidgets. 
+<ref>See wxPython.</ref>
+
+If we look at the documentation for wxWidgets, wxNotebookBase is not mentioned.
+However we will use it in the bindings.
+<ref>See wxPython.</ref>
+
+<para/>
+
+For each class that we find in the file, we can find 
+the class(es) from which it is derived.
+The function <r:func>getBaseClasses</r:func> does this.
+By default, it just returns the  immediate parent classes,
+i.e. those this class explicitly extends. 
+<r:code>
+getBaseClasses( tu [[ klasses$wxNotebook ]])
+<r:output>
+              40 
+"wxNotebookBase" 
+</r:output>
+</r:code>
+We can
+use the <r:arg>recursive</r:arg> argument to ask for all the ancestor classes.
+For wxNotebook, we get
+<r:code>
+getBaseClasses( tu [[ klasses$wxNotebook ]], recursive = TRUE)
+<r:output>
+              40               65              108              181 
+"wxNotebookBase" "wxBookCtrlBase"      "wxControl"  "wxControlBase" 
+             304              437              652              224 
+      "wxWindow"   "wxWindowBase"   "wxEvtHandler"       "wxObject" 
+</r:output>
+</r:code>
+giving us the entire chain of inheritance.
+
+
+<para/>
+
+We can also find out what enumerations were defined in the code.
+<r:code>
+enums = getEnumerations(tu, "notebook")
+</r:code>
+The return value of this is a numeric vector identifying
+the node number in the `tu' which we can use to resolve
+the actual definitions. The names of the elements
+in our vector give the names used in C/C++ when 
+declaring the enumerations. We get a strange one here - ".69".
+This turns out to be an anonymous collection of enumerated
+values related to HITTEST.
+We will want to make these available as separate named values in
+our interface.
+
+We can find the top-level routines that are declared in this file
+using
+<r:code>
+getRoutines(tu, "notebook")
+</r:code>
+In this case, we see that there are none.
+Of course, our classes have methods, but there are no 
+top-level "dangling" routines.
+
+<note>
+Get the non-mangled names.
+</note>
+
+We can find all declarations, including enumerations, 
+typedefs, top-level variables, etc. using
+<r:code>
+dcls = getAllDeclarations(tu, "notebook")
+</r:code>
+And we can look at what we get with
+<r:code>
+names(dcls)
+<r:output>
+ [1] "wxSortFuncFor_wxGtkNotebookPagesList"     
+ [2] "_WX_LIST_ITEM_TYPE_wxGtkNotebookPagesList"
+ [3] "wxNotebookEventFunction"                  
+ [4] "wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING"     
+ [5] "wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED"      
+ [6] "wxNotebookNameStr"                        
+ [7] "wxNotebookPage"                           
+ [8] "wxNB_HITTEST_ONITEM"                      
+ [9] "wxNB_HITTEST_ONLABEL"                     
+[10] "wxNB_HITTEST_ONICON"                      
+[11] "wxNB_HITTEST_NOWHERE"                     
+</r:output>
+</r:code>
+
+Again, we get back the indices of the associated node.
+So now we can go and explore these to find out which type
+of declarations each is.  We fetch the node in the Perl
+array and then determine its primary class (in Perl).
+
+<r:code>
+sapply(dcls, function(x) class(tu[[ x ]])[1])
+<r:output>
+     wxSortFuncFor_wxGtkNotebookPagesList 
+                   "GCC::Node::type_decl" 
+_WX_LIST_ITEM_TYPE_wxGtkNotebookPagesList 
+                   "GCC::Node::type_decl" 
+                  wxNotebookEventFunction 
+                   "GCC::Node::type_decl" 
+     wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING 
+                    "GCC::Node::var_decl" 
+      wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED 
+                    "GCC::Node::var_decl" 
+                        wxNotebookNameStr 
+                    "GCC::Node::var_decl" 
+                           wxNotebookPage 
+                   "GCC::Node::type_decl" 
+                      wxNB_HITTEST_ONITEM 
+                  "GCC::Node::const_decl" 
+                     wxNB_HITTEST_ONLABEL 
+                  "GCC::Node::const_decl" 
+                      wxNB_HITTEST_ONICON 
+                  "GCC::Node::const_decl" 
+                     wxNB_HITTEST_NOWHERE 
+                  "GCC::Node::const_decl" 
+</r:output>
+</r:code>
+
+Perhaps, it is easier to see this by computing a table
+of the different types.
+<r:code>
+table(sapply(dcls, function(x) class(tu[[ x ]])[1]))
+<r:output>
+GCC::Node::const_decl  GCC::Node::type_decl   GCC::Node::var_decl 
+                    4                     4                     3 
+</r:output>
+</r:code>
+Here, we see that there are 3 variables declared.
+The enumerations are those whose class is "const_decl".
+And then we have some typedef's. 
+
+
+<section id="Exploring Nodes">
+<title>Exploring Nodes</title>
+Let's look at 
+<r:code>
+dcls$wxNotebookNameStr
+<r:output>
+64 
+65 
+attr(,"class")
+[1] "TUParserIndex"
+</r:output>
+</r:code>
+
+Most of the nodes are, like most Perl classes, 
+essentially a dictionary or table of name-value
+pairs. (identifier_node's behave slightly differently.)
+So <r:func>names</r:func> can be used to treat
+the node like an R list and return the names of the elements.
+<r:code>
+names(tu [[ dcls$wxNotebookNameStr ]])
+<r:output>
+[1] "source"   "INDEX"    "position" "used"     "chan"     "name"     "algn"    
+[8] "type"     "size"    
+</r:output>
+</r:code>
+Some values are simple valeus, others reference other nodes
+which we have to recursively traverse to make sense of.
+For example,  to access the "source" element, we can use
+<r:code>
+x[["source"]]
+<r:output>
+[1] "notebook.h:44" 
+</r:output>
+</r:code>
+Note that we use [[ rather than $. Since
+the nodes are PerlReference objects, the
+$ operator is used for invoking a method in the Perl object,
+not accessing the object.
+
+The "type" element identifies a node which defines
+the type of this variable.
+<r:code>
+x[["type"]]
+</r:code>
+This returns an actual node, not its identity.
+The GccTranslationUnit parser takes care of this for us.
+By default (currently), the RSPerl interace will copy all
+the elements of the resulting. It is often more convenient
+to ask it for a reference to that node, and not fetch its contents.
+
+<r:code>
+x[["type", convert = FALSE]]
+</r:code>
+This gives us back just that node
+and we can look at its entries:
+<r:code>
+names(x[["type", convert = FALSE]])
+</r:code>
+This is the same as 
+<r:code>
+names(x[["type"]])
+</r:code>
+but in the former case, we have not copied the individual elements
+back to R.
+
+
+Recursively following these nodes can be tedious, error prone and very confusing.
+The top-level functions we discussed in the section above made finding the 
+components of the code in which we are interested much simpler than doing this 
+directly from the nodes.
+Similarly, there are tools for resolving the different data types in the code, 
+collecting descriptions of class methods, and so on.
+
+
+</section>
+
+<section id="Class Methods">
+<title>Class Methods</title>
+
+We can ask for a description of the methods in a class 
+using  <r:func>getClassMethods</r:func>.
+This allows us to control whether we want only the public methods,
+or the also the protected and private methods.
+
+<r:code>
+m = getClassMethods( tu [[ klasses [1] ]] )
+</r:code>
+And we can see which methods we have
+<r:code>
+names(r)
+<r:output>
+ [1] "wxNotebook"                "wxNotebook"               
+ [3] "Create"                    "wxNotebook"               
+ [5] "SetSelection"              "GetSelection"             
+ [7] "SetPageText"               "GetPageText"              
+ [9] "GetPageImage"              "SetPageImage"             
+[11] "SetPageSize"               "SetPadding"               
+[13] "SetTabSize"                "HitTest"                  
+[15] "DeleteAllPages"            "InsertPage"               
+[17] "OnNavigationKey"           "GetClassDefaultAttributes"
+[19] "SetConstraintSizes"        "DoPhase"                  
+[21] "DoApplyWidgetStyle"        "IsOwnGtkWindow"           
+[23] "Init"                      "GetNotebookPage"          
+[25] "GetClassInfo"              "wxCreateObject"           
+</r:output>
+</r:code>
+
+These are the initial descriptions of the methods.
+At this point, the types of the parameters and return value
+are not resolved but are simply the identifiers of the nodes
+which defines these types. Many of these types will be 
+used in multiple locations. We do not want to resolve
+each reference each time it is encountered.
+We would rather cumulate them into a repository or archive
+and when we are about to resolve a node, see if it has already
+been resolved. If so, we use that definition. If not, we resolve
+it and add it to the archive. 
+The DefinitionContainer class and associated constructor function
+in the <r:package id="RGCCTranslationUnit"/> package
+can be used as such a repository or archive.
+It is smart enough, along with the resolveType function
+to be able to handle recursively defined data structures
+such as linked lists which have fields to the very same data type as is being defined.
+
+So we can resolve the entire information in a given method with code like
+<r:code>
+defs = DefinitionContainer()
+resolveType(m[[1]], tu, defs)
+</r:code>
+and in all the methods together using
+<r:code>
+methods = lapply(m, resolveType, tu, defs)o
+</r:code>
+
+<note>
+Emit the warning about ignoring fields only once.
+Why are we seeing it so many times,
+e.g. for grid.cpp.tu and the class wxGrid.
+Should only be resolved once!
+</note>
+
+This gives us complete description of the methods
+in R.  Some components may still need further resolution 
+such as the data type for a pointer type, but the
+information is now available in <r:var>defs</r:var>.
+
+<note>
+Make certain these resolved nodes are available to us in the defs object.
+</note>
+
+</section>
+
+
+<section id="Generating Bindings">
+<title>Generating Bindings</title>
+
+For a single class, we can use <r:func>createClassBindings</r:func> to
+generate bindings.  This returns an object of class
+<r:class>C++ClassInterfaceBindings</r:class>.  This has 3 elements -
+regular, overloaded and classDefinitions.  The regular element is for
+simple functions that are not overloaded (for this class).  The
+overloaded element gives the list of functions that have 2 or more
+methods of the same name.  The classDefinitions tells us about all the
+ancestor classes and give us the definitions
+for the R classes so that we have a complete map between the two systems.
+
+
+The generic function <r:func>writeCode</r:func>
+can then serialize these binding definitions to a 
+general connection such as a file. This amounts to 
+making the generated code available so that it can
+be processed and merged into an R session.
+
+
+
+
+
+</section>
+
+
+<section id="Multiple Source Files">
+<title>Multiple Source Files</title>
+
+To generate the bindings to wxWidgets, we need to read all of the
+relevant .h files.
+<r:code>
+list.files("/usr/local/include/wx-2.6/wx", recursive = TRUE)
+</r:code>
+
+The files in the top-level directory
+are given by
+<r:code>
+list.files("/usr/local/include/wx-2.6/wx", recursive = TRUE)
+</r:code>
+
+We can iterate over these and create .cpp files that include each.
+Then we can attempt to create the .tu files for each of these.
+Some will fail as the order of inclusion will be incorrect.
+
+
+<r:code>
+topfiles = list.files("/usr/local/include/wx-2.6/wx", recursive = FALSE)
+isdir = file.info(list.files("/usr/local/include/wx-2.6/wx", recursive = FALSE, full.names = TRUE))$isdir
+topfiles = topfiles[!isdir]
+</r:code>
+We need to remove those entries that are directories.
+
+<r:code>
+<![CDATA[
+if(!file.exists(dir))
+  dir.create(dir)
+
+prefix = paste("PREFIX", dir, sep = "=")
+
+# A list of character vectors giving the names of the different files that 
+# are to be also included along with wx.h for the file identified by the element
+# name of the list.
+# e.g. when creating memtext.h, include  wx/textbuf.h also.
+# There can be several includes for a given file given as a character vector.
+extraIncludes = list( 'memtext.h' = "wx/textbuf.h")
+
+cppfilenames = gsub("\\.h$", "\\.cpp", topfiles)
+cppfilenames = paste("/tmp/wxWidgets", cppfilenames, sep = .Platform$file.sep)
+
+tuFiles =
+sapply(seq(along = topfiles),
+  function(i) {
+     if(!file.exists(cppfilenames[i])) {
+         # Bring in the extra includes
+       tmp <- extraIncludes[[ topfiles[i] ]]
+       if(!is.null(tmp))
+          tmp <- paste("#include<", tmp, ">", sep = "", collapse = "\n")
+       else
+          tmp = character()
+
+       cat("#include <wx/wx.h>\n", tmp, "#include <wx/", topfiles[i], ">\n", sep = "", file = cppfilenames[i]) 
+     } 
+     tu = paste(cppfilenames[i], ".tu", sep = "")
+     ifelse(system(paste("make", tu, prefix)) == 0, tu, NA)
+  })
+names(tuFiles) = topfiles
+]]>
+</r:code>
+
+There are approximately 270 files in the wxWidgets distribution
+that we have to process. We get 5 files that could not be compiled
+using this simple approach.
+<r:code>
+names(tuFiles)[is.na(tuFiles)]
+<r:output>
+ "access.h"    
+ "dde.h"   
+ "memtext.h"  
+ "thrimpl.cpp"
+ "xti.h"      
+</r:output>
+</r:code>
+
+Only memtext.h is the one of importance and we 
+fix this by including <file>wx/textbuf.h</file>
+ahead of it to introduce the relevant declarations
+and definitions.
+
+<notes>
+<note>access.h 
+can't find the generic/access.h file. Looks like an error in the
+setup/installation/etc. for wxWidgets for Gtk or perhaps just on my machine.
+</note>
+<note>
+dde is for windows only
+</note>
+<note>
+memtext.h needs textbuf.h to be included first.
+</note>
+<note>
+thrimpl -
+this is an implementation file and we are concerned with 
+thread.h.
+From the top of the thrimpl.h file:
+<pre>this file is supposed to be included only by the various thread.cpp</pre>
+</note>
+<note>
+The xti file cannot find wx/flags.h. Is this an error in wxWidgets (using Gtk)?
+This looks like it is not a big part of wxWidgets but something added by others
+to the distribution for special purposes. It is an extension of the
+run type information.
+</note>
+
+</notes>
+We also have to worry that there are other files that we missed in
+sub-directories.
+
+<para/>
+Given these .tu files, we can now collect all the different pieces of information.
+<r:code>
+tuFiles = cppfilenames[!is.na(tuFiles)]
+</r:code>
+
+<section id="compression">
+<title>Compression</title> We should note that the .tu files are quite
+large and there are many of them which can consume a non-trivial
+amount of disk space.  The obvious thing to do is compress them.  We
+have adapted the Ashley Winter's GCCTranslationUnit Perl module to
+handle tu files that are compressed.  By using the
+<pl:module>IO::Uncompress::AnyUncompress module</pl:module> to open
+the file, we can support any of the compression tools and scheme for
+which there is a filter installed as this module attempts to
+auto-detect the compression scheme.  This modification is in the
+<r:package>RGCCTranslationUnit</r:package> package which we use to read
+arbitrary .tu files.
+
+<para/>
+Of course, if we compress the files, they take longer to read as they
+must be uncompressed on-the-fly. If disk space is an issue,
+compression will be useful but we have seen a slow down of the reading
+of the files of a factor of 4.
+
+
+</section>
+
+<section>
+<title>An alternative approach</title>
+
+We could also just look at wx.h and generate the tu file from that and
+then bring in all the declarations and definitions from that:
+<r:code>
+wx = parseTU("grid.cpp.tu")
+</r:code>
+Firstly, this is a big file - 33Mb.  It has 350K nodes in the
+translation unit tree.
+<r:code>
+.PerlLength(wx)
+<r:output>
+[1] 353705
+</r:output>
+</r:code>
+However, on my shuttle, it only takes 36 seconds in elapsed time to
+parse the file.  Processing the entire chain of nodes for different
+elements takes time, but for tasks like finding variables and routines
+and classes these are part of a linked chain. So we do not have to
+process each node in turn. For enumerations this is more of a problem.
+The looping is done in Perl and in fact this only takes 3.6 seconds.
+So this is a promising approach.
+
+<para/>
+
+Also, it is hard to differentiate between definitions that are part of
+include files from other parts of the system, e.g. the compiler, the
+linux operating system, from the ones in the wxWidgets directory.
+This is because the translation unit dump refers to files only by name
+and not their (complete or incomplete) path name.
+
+<para/>
+In spite of this limitation, we can use the names of the header files
+in the wx/ include directory that we computed above.
+The functions that allow us to filter declarations and definitions
+for specific files accept multiple file names in the call.
+
+<r:code>
+globals = getClassNodes(wx, c("window", "frame", "event", "list", "grid", "colour"))
+length(globals)
+<r:output>
+[1] 65
+</r:output>
+</r:code>
+
+So we can leverage this by getting the name of any 
+file that might be included.
+We use the following code to determine the names of the 
+<r:code>
+topfiles = list.files("/usr/local/include/wx-2.6/wx", recursive = TRUE)
+targets = gsub("\\.[^\\.]+$", "", topfiles)
+targets = gsub(".+/", "", targets)
+</r:code>
+If we only want the files at the top-level, we compute the <r:var>topfiles</r:var> and
+<r:var>targets</r:var>
+variables as
+<r:code>
+topfiles = list.files("/usr/local/include/wx-2.6/wx", recursive = FALSE)
+isdir = file.info(list.files("/usr/local/include/wx-2.6/wx", recursive = FALSE, full.names = TRUE))$isdir
+topfiles = topfiles[!isdir]
+targets = gsub("\\.[^\\.]+$", "", topfiles)
+</r:code>
+
+Then, we can calculate the classes
+<r:code>
+wxClasses = getClassNodes(wx, targets)
+</r:code>
+And we end up with 379 of them.
+
+
+<r:code>
+tb = getClassMethods(wx[[ wxClasses$wxHashTable ]])
+</r:code>
+
+
+<r:code>
+<![CDATA[
+wxDeclarations <- getAllDeclarations(wx, targets)
+]]>
+</r:code>
+This takes about 10 seconds and returns over 2000 entries.
+Unfortunately, this includes symbols
+such as __u_long, strlen, bzero which are picked up from system-level
+headers.  This is because, as we mentioned, gcc does not include the
+unique identifier for the source file of a node but just 
+the file name with no path. And so files like string.h and types.h
+are in both the wx directory and the system directory and
+there is no way to differentiate between them.
+So if we want to discard these, we have to find a way 
+to identify them.
+
+<para/>
+
+We can prepare a list of "symbol" names that we don't want to process.
+We can do this manually, or we can process the header files that are
+not of interest (e.g. the system header files) and find their symbols.
+We can do this using the RGCCTranslationUnit in the same way and
+create this list of definitions and declarations automatically.  We
+can create a C++ file that merely includes the headers whose symbols
+we don't want.  Which header files do we include?  We could include
+the typical suspects such as stdlib.h, stdio.h, iostream, string.h.
+Of course, any list we include manually may leave out some header
+files that are included by our target source, i.e. wxWidgets, and
+include some that are not relevant.  
+Again, we can make use of a convenient feature in GCC 
+which enumerates the list of included files during
+the compilation of a source file.
+The flags -M and -MM give all the included files
+and just the non-system included files, respectively.
+Our GNUmakefile in this directory has two targets
+which create the deps and localDeps files.
+And the function <r:func>readDependencies</r:func> in RGCCTranslationUnit
+reads these into an R character vector.
+From these two sets, we can find the system-level files.
+
+<r:code>
+deps =  readDependencies("deps")
+localDeps =  readDependencies("localDeps")
+sysOnly = setdiff(deps, localDeps)
+</r:code>
+
+We can then use the files in <r:var>sysOnly</r:var> to create the C++
+file of interest, e.g. system.cpp, and generate the tu from that and
+then read its nodes into R.
+<r:code>
+con = file("sysOnly.cpp", "w")
+for(i in sysOnly[ - grep("(/usr/lib/gcc|/bits/)", sysOnly) ] ) 
+   cat('#include "', i, '"\n', sep = "", file = con)
+close(con)
+</r:code>
+
+The one thing to deal with here is that the order of inclusion
+of these header files is important to get the compilation correct.
+GCC appears to give them to us in the correct order.
+However, using g++ 4.0.1 (and probably higher) we get errors
+about not having an include path. Explicitly  include names
+by their full path does not work.
+Using g++ 3.2.2 does work, but we get different errors.
+Also, there are some files that we should not include directly,
+e.g. bits/sched.h.
+So we need to identify these and filter them out of our includes
+as we do those in  /usr/lib/gcc/..
+Also, some header files do not have protection against multiple inclusions,
+e.g. bits/confname.h, fcntl.h, dirent.h.
+All of these are from the <dir>bits</dir> directory.
+So if we exclude these, then all is well.
+
+<r:code>
+sys = parseTU("system.cpp.tu")
+sysDeclarations = getAllDeclarations(sys)
+</r:code>
+
+Now we can see what symbols are shared by both,
+and which are unique for wxWidgets.
+<r:code>
+both = intersect(names(wxDeclarations), names(sysDeclarations))
+
+wxSyms = setdiff(names(wxDeclarations), names(sysDeclarations))
+
+wxOnlyDeclarations = wxDeclarations[ is.na(match(names(wxDeclarations), both)) ]
+</r:code>
+
+Looking at the lengths of wxSyms and both, we see that the sum is not
+equal to the length of wxDeclarations.  This is because
+wxDeclarartions has numerous duplicate names - unique nodes that have
+the same names in R. This is because we try to use meaningful names in
+R that come from the description of the C/C++ entity associated with
+the name, e.g. the name of the routine, variable, class.  These
+duplicates identify overloaded symbols uch as wxFileNameFromPath.
+These are not overloaded methods as we have only processed top-level
+declarations and not methods within classes at this point.  Rather
+these are routines and variables.
+
+<para/>
+Note that <r:var>wxSyms</r:var> includes numerous 
+references to overloaded operators such as plus, minus, mult.
+
+<para/>
+
+
+</section>
+
+
+<section>
+<title>Methods</title>
+First we find the names of all the methods within the classes:
+<r:code>
+methodNames = unlist(lapply(wxMethods, names))
+<r:code>
+We can quickly see which are overloaded with a call to table.
+
+Next we can look at the classes of these top-level declarations.
+We get the number of each type of declaration with:
+<r:code>
+types = sapply(wxOnlyDeclarations, function(id) class(wx[[id, convert = FALSE]])[1])
+table(types)
+</r:code>
+
+Now let's look at the routines.
+<r:code>
+routines =  wxOnlyDeclarations[types == "GCC::Node::function_decl"]
+</r:code>
+
+Another approach is to ask for all the routines directly from
+all of the nodes.
+<r:code>
+wxRoutines = getRoutines(wx, targets)
+wxRoutines = wxRoutines[ is.na(match(names(wxRoutines), both))]
+</r:code>
+
+<note>
+These contain lots of duplicated overloaded operators such as mult, plus, ...
+We may want to provide methods for these later.
+</note>
+
+
+<r:code>
+wxRoutines = getRoutines(wx, targets)
+wxRoutines = wxRoutines[ is.na(match(names(wxRoutines), both))]
+</r:code>
+Note that this includes a lot of routines with mangled names.
+Let's look at the names that are not obviously wxWidgets related
+i.e. have a prefix of "wx" (and also exclude the magnled symbols).
+<note>
+These mangled names no longer appear as they are marked as "thunks"
+in the nodes.
+</note>
+<r:code>
+unique(names(wxRoutines)[ - grep("^(_ZThn|wx)", names(wxRoutines)) ])
+<r:output>
+ [1] "mult"           "minus"          "plus"           "matherr"       
+ [5] "NewControlId"   "LongToString"   "IntToString"    "StringToLong"  
+ [9] "StringToInt"    "DoubleToString" "StringToDouble" "FloatToString" 
+[13] "StringToFloat"  "ne"             "eq"             "ge"            
+[17] "le"             "gt"             "lt"             "lshift"        
+[21] "grow_lf70"      "never_shrink"   "never_grow"     "copystring"    
+[25] "rshift"         "Stricmp"        "Strlen"         "IsEmpty"       
+</r:output>
+</r:code>
+The ne, ge, lt, plus, minus, etc. are all C++ operators.  the
+grow_l70, never_shrink and never_grow are part of the hashmap in
+wxWidgets.  The *ToString and StringTo* and copystring, are defined in
+utils.h (but are marked as deprecated).  IsEmpty is defined in many wx
+header files.  However, the ones in wxchar.h and string.h are the
+relevant ones (identical and inlined).
+
+<para/>
+rshift/lshift and matherr are more curious.  We can find the origin of
+the each of these by returning to their defining nodes and looking at
+the "source" attribute.  rshift is defined in a string.h file, lshift
+in a longlong.h file and matherr in math.h So rshift and lshift are
+not coupled.  In fact, lshift is part of wxWidgets.  These are part of
+the compiler and we need to discard these.
+
+
+
+
+<r:code>
+r = resolveType(wxRoutines$wxRmdir, wx)
+createMethodBinding(r, nodes = wx)
+</r:code>
+
+
+
+</section>
+
+
+<section>
+<title>Generating Bindings</title>
+
+We have the class definitions as <r:var>wxClasses</r:var>.
+From this, we want to generate bindings.
+
+<r:code>
+b = createClassBindings( wx [[ wxClasses$wxWindow ]], wx)
+</r:code>
+
+generateClassBindings =
+function(className, 
+         nodes, classes,
+         dir = "/tmp/RwxWidgets",
+         files = paste(dir, paste(className, c("cpp", "R"), sep = "."), sep = .Platform$file.sep),
+         includes = c("wx/wx.h", "Rdefines.h", "Rinternals.h", "RConverters.h"))
+{
+  b = createClassBindings( nodes [[ classes[[ className ]] ]], nodes)
+
+  con = file(files[1], "w")
+  for(i in includes)
+    cat("#include <", i, ">\n", sep = "", file = con)
+  writeCode(b, "native", file = con)
+  close(con)
+
+  con = file(files[2], "w")
+  writeCode(b, "r", file = con)
+  close(con)
+
+  files
+}
+</section>
+
+</section>
+
+<section>
+<title>Debugging the RGCCTranslationUnit</title>
+Let's look at the classes of all the nodes
+<r:code>
+nodeClasses = unlist(lapply(wx, function(x) class(x)[1]))
+sort(table(nodeClasses))
+<r:output>
+         GCC::Node::exc_ptr_expr             GCC::Node::file_stmt 
+                               1                                1 
+                         integer              GCC::Node::asm_stmt 
+                               1                                2 
+         GCC::Node::boolean_type             GCC::Node::lang_type 
+                               2                                2 
+             GCC::Node::max_expr          GCC::Node::cleanup_stmt 
+                               2                                3 
+         GCC::Node::complex_type       GCC::Node::const_cast_expr 
+                               4                                4 
+           GCC::Node::error_mark              GCC::Node::min_expr 
+                               4                                4 
+       GCC::Node::namespace_decl             GCC::Node::void_type 
+                               4                                4 
+   GCC::Node::cleanup_point_expr               GCC::Node::dl_expr 
+                               5                                5 
+          GCC::Node::switch_stmt          GCC::Node::bit_not_expr 
+                               5                                6 
+         GCC::Node::bit_xor_expr               GCC::Node::nw_expr 
+                               7                                7 
+             GCC::Node::abs_expr          GCC::Node::dotstar_expr 
+                               8                                8 
+           GCC::Node::member_ref               GCC::Node::do_stmt 
+                               8                               10 
+            GCC::Node::bind_expr             GCC::Node::exit_expr 
+                              11                               11 
+            GCC::Node::loop_expr             GCC::Node::real_type 
+                              11                               12 
+            GCC::Node::rdiv_expr GCC::Node::reinterpret_cast_expr 
+                              13                               13 
+           GCC::Node::union_type        GCC::Node::fix_trunc_expr 
+                              15                               17 
+          GCC::Node::lshift_expr      GCC::Node::empty_class_expr 
+                              17                               18 
+          GCC::Node::rshift_expr   GCC::Node::template_parm_index 
+                              18                               20 
+           GCC::Node::float_expr            GCC::Node::arrow_expr 
+                              21                               22 
+          GCC::Node::typeof_type    GCC::Node::postdecrement_expr 
+                              22                               23 
+       GCC::Node::aggr_init_expr    GCC::Node::postincrement_expr 
+                              28                               33 
+              GCC::Node::ge_expr      GCC::Node::template_id_expr 
+                              36                               36 
+       GCC::Node::exact_div_expr            GCC::Node::case_label 
+                              42                               43 
+       GCC::Node::trunc_mod_expr          GCC::Node::bit_ior_expr 
+                              46                               47 
+          GCC::Node::negate_expr        GCC::Node::trunc_div_expr 
+                              47                               52 
+           GCC::Node::break_stmt             GCC::Node::array_ref 
+                              53                               56 
+              GCC::Node::le_expr            GCC::Node::throw_expr 
+                              56                               58 
+              GCC::Node::handler      GCC::Node::static_cast_expr 
+                              59                               60 
+            GCC::Node::try_block              GCC::Node::real_cst 
+                              63                               84 
+      GCC::Node::truth_orif_expr     GCC::Node::predecrement_expr 
+                              90                               99 
+     GCC::Node::ctor_initializer           GCC::Node::sizeof_expr 
+                             109                              130 
+             GCC::Node::for_stmt               GCC::Node::gt_expr 
+                             131                              154 
+           GCC::Node::string_cst         GCC::Node::enumeral_type 
+                             154                              167 
+           GCC::Node::while_stmt         GCC::Node::eh_spec_block 
+                             170                              188 
+       GCC::Node::truth_not_expr             GCC::Node::cast_expr 
+                             192                              209 
+              GCC::Node::lt_expr           GCC::Node::constructor 
+                             211                              226 
+     GCC::Node::truth_andif_expr             GCC::Node::mult_expr 
+                             242                              257 
+        GCC::Node::typename_type            GCC::Node::array_type 
+                             264                              286 
+         GCC::Node::integer_type             GCC::Node::save_expr 
+                             315                              317 
+            GCC::Node::scope_ref          GCC::Node::bit_and_expr 
+                             340                              348 
+    GCC::Node::preincrement_expr             GCC::Node::cond_expr 
+                             365                              370 
+           GCC::Node::label_decl            GCC::Node::label_stmt 
+                             386                              386 
+           GCC::Node::minus_expr         GCC::Node::template_decl 
+                             495                              548 
+              GCC::Node::eq_expr               GCC::Node::ne_expr 
+                             558                              629 
+           GCC::Node::modop_expr      GCC::Node::method_call_expr 
+                             809                              914 
+      GCC::Node::non_lvalue_expr             GCC::Node::stmt_expr 
+                             956                              970 
+                GCC::Node::binfo           GCC::Node::target_expr 
+                            1079                             1144 
+        GCC::Node::compound_expr             GCC::Node::subobject 
+                            1184                             1518 
+              GCC::Node::if_stmt             GCC::Node::decl_stmt 
+                            1593                             1608 
+   GCC::Node::template_type_parm        GCC::Node::reference_type 
+                            1648                             1707 
+        GCC::Node::function_type            GCC::Node::field_decl 
+                            1941                             2091 
+          GCC::Node::record_type            GCC::Node::const_decl 
+                            2110                             2294 
+          GCC::Node::modify_expr          GCC::Node::convert_expr 
+                            2452                             2938 
+          GCC::Node::result_decl              GCC::Node::tree_vec 
+                            3011                             3336 
+            GCC::Node::plus_expr           GCC::Node::return_stmt 
+                            3727                             4199 
+            GCC::Node::ctor_stmt              GCC::Node::var_decl 
+                            4242                             4280 
+         GCC::Node::pointer_type           GCC::Node::lookup_expr 
+                            4718                             5006 
+            GCC::Node::init_expr             GCC::Node::type_decl 
+                            5089                             5472 
+        GCC::Node::component_ref          GCC::Node::indirect_ref 
+                            7613                             7724 
+          GCC::Node::method_type           GCC::Node::integer_cst 
+                            9070                            10217 
+            GCC::Node::call_expr             GCC::Node::expr_stmt 
+                           10252                            11334 
+      GCC::Node::identifier_node            GCC::Node::scope_stmt 
+                           12996                            17709 
+        GCC::Node::compound_stmt         GCC::Node::function_decl 
+                           18548                            18783 
+            GCC::Node::addr_expr              GCC::Node::nop_expr 
+                           23969                            25598 
+            GCC::Node::parm_decl             GCC::Node::tree_list 
+                           34659                            63591 
+</r:output>
+</r:code>
+
+
+Now lets look at the DefinitionContainer 
+
+<r:code>
+r = getClassMethods(wx [[ wxClasses$wxWindow ]])
+types = DefinitionContainer(verbose = TRUE)
+o = lapply(r, resolveType, wx, classDefs = types)
+</r:code>
+</section>
+
+<section id="todo">
+<title>To Do</title>
+<itemizedlist>
+<listitem>
+Polymorphism across classes
+</listitem>
+<listitem>
+Casting to other classes.
+</listitem>
+
+<listitem>
+Extension class using R functions.
+</listitem>
+</itemizedlist>
+</section>
+
+
+
+
+<ignore>
+grid = parseTU("wxGrid.cpp.tu")
+k  = getClassNodes(grid, "grid")
+mts = getClassMethods(grid[[ k$wxGrid]])
+tt = resolveType(mts$Fit, grid)
+</ignore>
+</article>

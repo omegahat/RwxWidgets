@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1>Nested HTML</h1>
+
+This is an example of displaying an HTML document
+with an embedded object/component which is itself
+displaying an HTML document.
+
+<p>
+
+<OBJECT type="app/x-R-widget" WIDTH=200 HEIGHT="300">
+ <param name="call" value="h <-createHtmlViewer('examples/basicForm.html',wxHtmlParser_GetWindow(parser));h">
+</OBJECT>
+
+
+<p>
+
+However, the scroller on the embedded HTML viewer doesn't work.
+Buttons inside that html viewer are active
+<p>
+
+An initial problem was that the size and location of the
+embedded widget are not correct. We have to explicitly set
+the size in the code (e.g. <code>SetSize(h, 200, 300); </code>).
+This is now done in the handler for the OBJECT
+which reads the WIDTH and HEIGHT attributes..
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Tue Sep  5 13:29:18 PDT 2006
+<!-- hhmts end -->
+</body> </html>

@@ -1,0 +1,6 @@
+WX_CONFIG=@WX_CONFIG@
+wxConstants: wxConstants.cpp
+	$(CXX) -o $@ -I../../src $(shell $(WX_CONFIG) --cflags --libs) $<
+
+wxDefines: wxDefines.cpp
+	$(CXX) -o $@ -I../../src $(shell $(WX_CONFIG) --cflags --libs) $<

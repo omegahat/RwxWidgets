@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<article>
+<section><title>Unix</title>
+
+for RwxApp and even in noapp() the RwxApp() default initializer is invoked.
+<gdb>
+#0  RwxApp::setOnInit (this=0x187d300, onInit=0x1aaa180) at RwxApp.h:26
+#1  0x00002b3ce30ec2ba in RwxApp (this=0x187d300) at RwxApp.h:17
+#2  0x00002b3ce30ebd71 in wxCreateApp () at RwxApp.cpp:25
+#3  0x00002b3ce40c2aa1 in wxEntryStart (argc=@0x7fffffdc456c, argv=0x0) at ./src/common/init.cpp:265
+#4  0x00002b3ce40c2c69 in wxInitialize (argc=0, argv=0x0) at ./src/common/init.cpp:470
+#5  0x00002b3ce30ebd2b in R_wxWidgets_wxInitialize () at RwxApp.cpp:63
+</gdb>
+
+This is related to the definition of wxCreateApp 
+defined in IMPLEMENT_APP_NO_MAIN
+And this is related to our 
+DECLARE_APP
+IMPLEMENT_APP
+
+<para/>
+Is this such a bad thing? Does it have any consequences.
+
+<para/>
+We might elect not to have an RwxApp in the R package RwxWidgets.
+But then we get a segmentation fault in noapp.R 
+<gdb>
+#0  0x00002b196093a7de in wxCursor::operator== (this=0x17365c0, cursor=@0x0) at ./src/gtk/cursor.cpp:324
+#1  0x00002b196093a987 in wxCursor::operator= (this=0x17365c0, cursor=@0x0) at ./src/gtk/cursor.cpp:314
+#2  0x00002b19609651fe in wxWindow::Init (this=0x1736510) at ./src/gtk/window.cpp:2812
+#3  0x00002b196096a789 in wxWindow (this=0x1736510) at ./src/gtk/window.cpp:2828
+#4  0x00002b1960a54a62 in wxTopLevelWindowBase (this=0x1736510) at ./src/common/toplvcmn.cpp:55
+#5  0x00002b196013434a in wxTopLevelWindowGTK::wxTopLevelWindowGTK$base () at ./include/wx/gtk/icon.h:32
+#6  0x00002b19601343da in wxTopLevelWindow::wxTopLevelWindow$base () at ./include/wx/gtk/icon.h:32
+#7  0x00002b1960a03691 in wxFrameBase (this=0x1736510) at ./src/common/framecmn.cpp:67
+#8  0x00002b195ffdf135 in wxFrame (this=0x1736510, parent=0x0, id=-1, title=@0x7fffff9474b0, 
+    pos=@0x7fffff9474a0, size=@0x7fffff947490, style=541072960, name=@0x7fffff9474c0)
+    at /usr/local/include/wx-2.6/wx/gtk/frame.h:45
+#9  0x00002b195ffdeff2 in R_RwxFrame_new (r_title=0x20acef8, r_pos=0x20a4958, r_size=0x20a4d18, 
+</gdb>
+
+The issue arises because wxSTANDARD_CURSOR is 0.
+And this is initialized in wxIntializeStockObjects()
+<gdb>
+#0  wxInitializeStockObjects () at ./src/common/gdicmn.cpp:573
+#1  0x00002ba64e36e2f9 in wxAppBase::Initialize (this=0x965020, argcOrig=@0x7fffffc5a5fc, argvOrig=0x0)
+    at ./src/common/appcmn.cpp:113
+#2  0x00002ba64e2c0eb3 in wxApp::Initialize (this=0x965020, argc=@0x7fffffc5a5fc, argv=0x0)
+    at ./src/gtk/app.cpp:699
+#3  0x00002ba64e941b22 in wxEntryStart (argc=@0x7fffffc5a5fc, argv=0x0) at ./src/common/init.cpp:280
+#4  0x00002ba64e941c69 in wxInitialize (argc=0, argv=0x0) at ./src/common/init.cpp:470
+#5  0x00002ba64d96ad2b in R_wxWidgets_wxInitialize () at RwxApp.cpp:73
+</gdb>
+<para/>
+
+We might add our own definition for wxCreateApp:
+
+<cpp:code>
+ wxAppConsole *R_wxCreateApp() {
+        wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,         
+                                        "your program");                   
+        return(NULL);
+ }
+ wxAppInitializer wxTheAppInitializer((wxAppInitializerFunction) R_wxCreateApp);        
+ appname& wxGetApp() { return *(appname *)wxTheApp; }
+</cpp:code>
+
+but we have to do the same initialization.
+And note that wxApp::Initialize() is entirely 
+dependent on gtk/ in this example so we want to avoid that.
+
+But this doesn't fix the problem.
+
+<para/>
+
+<subsection>
+<title>Event Loop</title>
+We are interested in merging the two event loops.
+We need to find out how we can add R's event loop to 
+wxWidgets event loop and run that, or vice versa.
+
+<para/>
+For integrating R into wxWidgets event loop,
+we might think about creating an extension of the
+wxEventLoop class.
+
+<para/>
+On Linux, we are using the gtk event loop.
+See ~/wxWidgets-2.6.3/src/gtk/evtLoop.cpp.
+This calls gtk_main().
+So we can use the same tricks we use in RGtk/RGtk2
+to get the same effect of merging this with the R
+event loop. What does this involve?
+Just add an input handler using the .
+
+<para/>
+
+wxEventLoop::Run creates wxEventLoopImpl
+
+
+<para/>
+We have Linux, Mac and Windows.
+And we have wxWidgets, Gtk, Qt, Cocoa, Tk, ...
+
+</subsection>
+
+</section>
+<section><title>Windows</title>
+On windows, when building wxWidgets from source,
+I had to use 
+ ./configure --with-expat=no
+
+as there as a problem in the configuration script for
+expat with an error about '$\r'.
+
+
+
+</section>
+</section>

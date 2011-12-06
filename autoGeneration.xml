@@ -1,0 +1,68 @@
+
+
+Let's take a look at the wxGrid class
+
+This is defined in wx/grid.h which actually points
+to wx/generic/grid.h
+
+The define's in this file are hard for us to deal with
+at the compiler level as the pre-processor has expanded them.
+
+Let's lookat grid.cpp.tu.
+
+There are several classes defined in that file.
+
+
+wxGridTableBase
+
+
+Start with the top-level node and follow the 'dcls' field.
+Walk the linked list via the 'chan' field of each,
+looking at the 'srcp' field.
+
+
+Let's look at node @3158
+
+type_decl  artificial
+ (@3158)
+
+
+
+
+The idea is that we can extend this class using
+the name, say, R_wxGridTableBase.
+
+For each field or method in the public
+section of the base class definition
+(wxGridTableBase), we have a
+corresponding field in the derived class
+(R_wxGridTableBase) which is
+of type SEXP.
+For methods in the base class, this 
+contains an R function.
+
+* Only provide these for the virtual methods.
+
+These R functions that act as methods in the
+
+Polymorphic Overloaded functions.
+
+
+Need to be able to invoke the inherited method from within R.
+e.g. from within the overriding derived method.
+
+
+Want to have access to both original and derived class
+methods. 
+
+
+References GetValueAsCustom(const wxString & typeName)
+
+
+These take ownership of the pointer.
+SetAttr(wxGridCellAttr *)
+
+
+
+Add facilities to treat the grid as a two dimensional table.
+

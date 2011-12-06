@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1></h1>
+
+<dl>
+
+  <dt>
+  <li> wxSizer::AddStretchSpacer
+       wxTextCtrl::Replace
+  <dd>
+  
+  <dt>
+  <li> the getWxClassInfo() result for a wxListInfo (see forms) is not
+      including wxControlWithItems.
+      
+  <dd>
+  
+  <dt>
+  <li> Issue with wxListBox and the conversion of the character()
+       vector to wxStringArray or wxString[]. 
+  <dd> Crashing in the wxString[] version. 
+  <dt>
+
+  <dt>
+  <li> How to get the text within an HTML tag  that we are handling?
+  <dd> See the TITLE handler in src/html/m_layout.cpp in wxWidgets source.
+       Suggestion from http://lists.wxwidgets.org/archive/wx-users/msg64227.html
+      
+  <li> Get the names of the constants in wxConstants.cpp to export.
+  <dd> Know these when we create wxConstants.cpp via
+       computeGlobalConstants, so use that.
+      <br>
+        Same for the anonymous enumerations.
+
+  <dt>
+  <li> 4 constant variables are not mapped. 
+  <dd>
+
+  <dt>
+  <li> Get the routines and eliminate the ones that are actually
+      defined in the system files and appear because of duplicate
+      names in wx and system header directories.
+  <dd>
+      
+  <dt>
+  <li> Finish off the  form handlers.
+  <dd>
+
+  <dt>
+  <li> Embedded HTML widget within 
+  <dd>
+
+  <dt>
+      In RwxRTTI.cpp in R_getClassNames, sort out the conversion of
+      wxChar* to an R string under unicode and ascii builds.
+  <dd> See the code to build wxConstants.cpp in constants.R
+  
+  <dt>
+  <li> Fix the evaluation environment for the object handlers.
+  <dd> Currently create a new one and put the parser in it to make it
+      available to the command.
+  
+  <dt>
+      GooglePageRank widgets
+  <dd>
+      Need forms to work for the embedded Google search page.
+      <dl>
+	<dt>
+	<li> rankGUI
+	<dd>
+	     notebook, html widget,        VBox &amp; HBox
+	     slider,
+	    graphics device
+<br>
+      dataViewer
+      </dl>
+
+      GraphViz
+
+
+
+  <dt>
+  <li> MarkovProcess
+  <dd>
+      <dl>
+	<dt>
+	<li> VPaned, VBox, HBox, HPaned, graphics device, data grid,
+	    transitionMatrixEditor from GooglePageRank,
+	    label and entry for inputting initial probabilities (could
+	    use a data grid)
+	<dd>
+      </dl>
+
+      
+  <dt>
+  <li> CheckBox, CheckListBox, wxChoice, wxChoiceBook, wxComboBox, wxToggleButton
+      wxRadioButton, wxRadioBox,  
+      wxGrid and wxGridCell (and BagSizer...)
+      wxStaticText, wxStatusBar, wxTreeCtrl, wxToolBar, wxTextCtrl
+  <dd>
+
+       wxSlider, wxSpinButton, 
+      
+  <dt>
+  <li> wxBoxSizer, wxFlexGridSizer, wxFrame, wxList, wxListBox,
+       wxNotebook, wxPanel, wxSashWindow, wxScrolledWindow,
+       wxMenu, menu bar, etc.
+       wxSplitterWindow, wxWindow, wxTipWindow, wxTopLevelWindow
+  <dd>
+
+
+  <dt>
+  <li> wxDialog
+  <dd> File, Font, 
+
+  <dt>
+  <li> wxIcon - LoadFile
+  <dd>  wxImageList. And add methods in R to treat like a list.
+      
+  <dt>
+  <li> wxClipboard - global variable and methods.
+  <dd> dynamic variable?
+      
+  <dt>
+  <li> Drag and Drop
+  <dd>
+  
+  <dt>
+  <li> Handle forms on the HTML widget.
+  <dd> Can register tag handlers.
+
+  <dt>
+  <li> Look at wxMozilla and wxIE.
+  <dd>
+  
+  <dt>
+  <li> On the Mac, the event loop is not functioning properly,
+       or at least we cannot even make the window come to the foreground.
+  <dd>
+       The samples work just fine.
+       This is an issue that we have to be running an app.
+       It is the same as the quartz graphics device from the command
+      line/console version of R.
+       See pythonw for a similar issue. Also use R.app 
+  
+  <dt>
+  <li> Check the IDs for the buttons in the examples/button.R.
+  <dd>
+
+
+  <dt>
+  <li> Fix the use of wxT() for non-character literals
+  <dd>
+
+  <dt>
+  <li> Get the HTML encoding error dialogs right (i.e. to go away).
+  <dd> Must build wxWidgets with --enable-unicode.
+
+  <dt>
+  <li> Image handling is now initialized in call to R_wxWidgets_init.
+  <dd>
+      
+  <dt>
+  <li> Resizing the HTML widget in htmlparser.R caused a 100%
+      CPU load in the X server.
+  <dd> Looks like something to do with the way we add the child
+       as the resizing is causing a lot of activity.
+      <br>
+        Actually, it looks like when we go to the bottom of the
+       HTML page, i.e. past the end of the grid.
+      <br>
+      It is caused by showing the bottom of the grid.
+      If we go below the grid so it is hidden, then things okay.
+
+
+
+</dl>
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Wed Apr 11 14:45:40 PDT 2007
+<!-- hhmts end -->
+</body> </html>
+
+
+

@@ -1,0 +1,36 @@
+This is currently for creating a minimal stand-alone
+test for the HTML widget to see why it doesn't work
+on the Mac and whether there is memory corruption or
+not. 
+
+
+make -f make
+
+gives a working version
+
+rm *.o *.so
+/Library/Frameworks/R.framework/Resources/R CMD SHLIB htmlwin.cpp
+
+gives one that doesn't work.
+
+
+To run, within R give the command
+
+ source("run.R")
+
+
+
+
+g++-4.0 -arch i386 -I/usr/local/lib/wx/include/mac-unicode-debug-2.6 -I/usr/local/include/wx-2.6 -D__WXDEBUG__ -D__WXMAC__ -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -DNO_GCC_PRAGMA -msse3 -fPIC -g -O2 -march=pentium-m -mtune=prescott -I/Library/Frameworks/R.framework/Resources/include -I/Library/Frameworks/R.framework/Resources/include/i386 -c htmlwin.cpp -o htmlwin.o
+g++ -flat_namespace -bundle -undefined suppress -L/usr/local/lib -o htmlwin.so htmlwin.o -L/usr/local/lib  -framework QuickTime -framework IOKit -framework Carbon -framework Cocoa -framework System  -lwx_macud_xrc-2.6 -lwx_macud_qa-2.6 -lwx_macud_html-2.6 -lwx_macud_adv-2.6 -lwx_macud_core-2.6 -lwx_base_carbonud_xml-2.6 -lwx_base_carbonud_net-2.6 -lwx_base_carbonud-2.6   -L/Library/Frameworks/R.framework/Resources/lib -lR
+(ttyp8)Pro[testing-123]>rm *.o *.so
+rm *.o *.so
+(ttyp8)Pro[testing-124]>/Library/Frameworks/R.framework/Resources/R CMD SHLIB htmlwin.cpp
+/Library/Frameworks/R.framework/Resources/R CMD SHLIB htmlwin.cpp
+WARNING: ignoring environment value of R_HOME
+g++-4.0 -arch i386 -I/Library/Frameworks/R.framework/Resources/include -I/Library/Frameworks/R.framework/Resources/include/i386 -I/usr/local/lib/wx/include/mac-unicode-debug-2.6 -I/usr/local/include/wx-2.6 -D__WXDEBUG__ -D__WXMAC__ -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES -DNO_GCC_PRAGMA  -msse3    -fPIC  -g -O2 -march=pentium-m -mtune=prescott -c htmlwin.cpp -o htmlwin.o
+g++-4.0 -arch i386 -dynamiclib -Wl,-macosx_version_min -Wl,10.3 -undefined dynamic_lookup -single_module -multiply_defined suppress -L/usr/local/lib -o htmlwin.so htmlwin.o -L/usr/local/lib  -framework QuickTime -framework IOKit -framework Carbon -framework Cocoa -framework System  -lwx_macud_xrc-2.6 -lwx_macud_qa-2.6 -lwx_macud_html-2.6 -lwx_macud_adv-2.6 -lwx_macud_core-2.6 -lwx_base_carbonud_xml-2.6 -lwx_base_carbonud_net-2.6 -lwx_base_carbonud-2.6   -L/Library/Frameworks/R.framework/Resources/lib/i386 -lR -dylib_file libRblas.dylib:/Library/Frameworks/R.framework/Resources/lib/i386/libRblas.dylib
+
+
+The only apparent difference in the compilation step is the order of
+the 

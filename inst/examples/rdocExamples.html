@@ -1,0 +1,98 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h2>DOM-style parser for XML content</h2>
+
+<h3>Description</h3>
+ Parses an XML or HTML file or string, and generates an R 
+ structure representing the XML/HTML tree.
+ Use <a href="htmlTreeParse">htmlTreeParse()</a> when the content is known
+ to be (potentially malformed) HTML.
+
+<h3>Usage</h3>
+<pre>
+xmlTreeParse(<a href="#file">file</a>, <a href="#ignoreBlanks">ignoreBlanks</a>=TRUE, handlers=NULL, replaceEntities=FALSE,
+             asText=FALSE, trim=TRUE, validate=FALSE, getDTD=TRUE,
+             isURL=FALSE, asTree = FALSE, addAttributeNamespaces = FALSE,
+             useInternalNodes = FALSE, isSchema = FALSE,
+             fullNamespaceInfo = FALSE, encoding = character(),
+             useDotNames = length(grep("^\\.", names(handlers))) > 0,
+             xinclude = TRUE)
+</pre>
+
+<h3>Parameters</h3>
+
+<dl>
+  <dt>
+  <li> <b><a name="file">file</a></b>:  <i>character vector</i>, <i>connection</i>
+  <dd>    The name of the file containing the XML contents.
+   This can contain ~ which is expanded to the user's
+   home directory.It can also be a URL. See <a href="#isURL">isURL</a>.
+   Additionally, the file can be compressed (gzip)
+   and is read directly without the user having
+   to de-compress (gunzip) it.
+
+  <dt>
+  <li> <b><a name="ignoreBlanks">ignoreBlanks</a></b>:  <i>logical</i>
+  <dd> logical value indicating whether
+text elements made up entirely of white space should be included
+in the resulting 'tree'.
+      
+</dl>
+...
+
+<h3>Examples</h3>
+<rcode>
+ fileName = system.file("exampleData", "basic.xml", package="XML")
+</rcode>
+<p>
+<examples>
+<example id="Removing comments">
+<description>
+<h2>Removing comment nodes from the DOM tree.</h2>
+This illustrates how to use a handler function that
+is applied to all comment nodes in the XML document
+and how we discard them from the resulting DOM tree.
+The handler returns NULL rather than the node
+and so it is not added to the resulting R tree.
+</description>
+<rcode>
+ xmlRoot(xmlTreeParse(fileName, 
+              handlers = list("comment" = function(x,...)  NULL), 
+              asTree = TRUE))
+</rcode>
+</example>
+<example id="From text">
+<description>
+<h2>Processing directly from text rather than a file</h2>
+This illustrates how we can use XML content obtained from any source
+and stored in a string and pass this directly to the XML parser.  In
+other words, we don't need to write this to a file and then point the
+parser to that file, but rather can work directly from the string.
+This is useful when we dynamically generate the document from another
+piece of software or when we fetch it dynamically via DCOM or over the
+Web where the XML parser's facilities for Web access are not
+sufficiently rich, e.g.  when SSL is needed for an https URL.
+</description>
+<rcode>
+xmlRoot(xmlTreeParse(readLines(fileName), asText=TRUE))
+</rcode>
+</example>
+</examples>
+
+<h3>Keywords</h3>
+<ul>
+<li> <a href="keyword:IO">I/O</a>
+<li> <a href="programming">programming</a>
+</ul>
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Fri May 25 15:36:17 PDT 2007
+<!-- hhmts end -->
+</body> </html>

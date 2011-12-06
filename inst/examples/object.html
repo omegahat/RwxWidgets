@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1></h1>
+
+<p/>
+This is where we use the body of the PARAM element.
+<OBJECT type="app/x-R-widget">
+<param name="init">
+# body
+data(mtcars)
+showDataGrid(mtcars, wxHtmlParser_GetWindow(parser))
+</param>
+</OBJECT>
+
+<p/>
+
+This is where we use a value attribute.
+<OBJECT type="app/x-R-widget">
+<PARAM name="init" value="
+# value attribute
+data(mtcars)
+showDataGrid(mtcars, wxHtmlParser_GetWindow(parser))
+"/>
+</OBJECT>
+
+
+
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Mon Jun 18 17:22:42 PDT 2007
+<!-- hhmts end -->
+</body> </html>

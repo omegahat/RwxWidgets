@@ -1,0 +1,9 @@
+WX_CONFIG=/usr/local/bin/wx-config
+PKG_CONFIG=/usr/local/bin/pkg-config
+
+PKG_CPPFLAGS=-I. $(shell ${WX_CONFIG} --cflags)   
+#-DwxUSE_UNICODE=1
+
+PKG_LIBS=$(shell ${WX_CONFIG} --libs) 
+
+

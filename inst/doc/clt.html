@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1></h1>
+
+<form>
+<init>
+statistics = list(mean = mean, median = median, min = min, max = max)
+populations = list(rnorm = rnorm, rbeta = function(x) rbeta(x, .5, .5))
+</init>
+
+<table>
+  <tr>
+    <th>
+<select name="distribution">
+ <option value="rnorm(n, 0, 1)"> N(0, 1)</option>
+ <option value="rbeta(n, .5, .5)"> Beta(.5, .5)</option>    
+</select>
+
+</th><th>
+
+<select name="statistic">
+<option value="mean"> average</option>
+<option value="median"> median</option>    
+</select>  
+</th>
+<th>
+Sample size
+    <br>
+<textarea rows="3" cols="5" name="sampleSize">25</textarea>
+</th>
+<th>    
+<input type="submit" value="simulate">
+</th>
+</tr>
+</table>
+
+<table>
+<tr><th><Rdevice name="popn"></Rdevice></th>
+    <th><Rdevice name="sampleDist"></Rdevice></th>
+</tr>
+</table>
+
+</form>
+
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Sun Dec 10 15:35:14 PST 2006
+<!-- hhmts end -->
+</body> </html>

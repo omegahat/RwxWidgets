@@ -1,0 +1,103 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Embedded Device</title>
+</head>
+
+<body> 
+
+<!-- Settings for the current page -->
+<init>
+<![CDATA[
+distributionNames <- c('Normal', 'Exponential', 'Uniform', 'Beta')
+sampleSizes <- c(1, 5, 10, 25, 50)
+statistics <- c("Mean" = mean, "Median" = median,
+                 "90 %" = function(x) quantile(x, .9),
+                 "Min" = min, "Max" = max)
+
+
+curDist <- "Normal"
+curSampleSize <- 5
+curStatistic = names(statistics[1])
+
+# Support code to simplify the creation of the GUI elements/controls
+# further down.
+createChoices <-
+function(els, processSelection, parser, insert = TRUE)
+{
+ win = wxHtmlParser_GetWindow(parser)
+ lb = wxListBox(win, wxID_ANY, choices = els)
+ lb$AddCallback(wxEVT_COMMAND_LISTBOX_SELECTED, 
+                             function(ev) {
+                                obj = ev$GetEventObject()
+                                lbv = obj$GetSelections() + 1
+                                processSelection(lbv)
+                             })
+ if(insert) {
+    insertEmbeddedComponent(lb, parser)
+    TRUE
+ } else
+    lb
+}
+
+]]>
+</init>
+
+<p>
+Choose a distribution
+<listbox>
+<![CDATA[
+ win = wxHtmlParser_GetWindow(parser)   
+ distributionLB = wxListBox(win, wxID_ANY, choices = distributionNames)
+ distributionLB$AddCallback(wxEVT_COMMAND_LISTBOX_SELECTED, 
+                             function(ev) {
+                                obj = ev$GetEventObject()
+                                lbv = obj$GetSelections() + 1
+                                curDist <<- distributionNames[ lbv ] 
+                                showDist(curDist, curSampleSize, curStatistic, whichDev = distDevice)
+                             })
+ insertEmbeddedComponent(distributionLB, parser)
+]]>
+</listbox>
+
+
+<p>
+
+Choose a sample size.
+<listbox>
+<![CDATA[
+ win = wxHtmlParser_GetWindow(parser)   
+ sampleSizeLB = wxListBox(win, wxID_ANY, choices = sampleSizes)
+ cb = function(ev) {
+                                obj = ev$GetEventObject()
+                                lbv = obj$GetSelections() + 1
+                                curSampleSize <<- sampleSizes[ lbv ] 
+                                showDist(curDist, curSampleSize, curStatistic, whichDev = distDevice)
+                             }
+ environment(cb) = env
+ sampleSizeLB$AddCallback(wxEVT_COMMAND_LISTBOX_SELECTED, cb)
+ insertEmbeddedComponent(sampleSizeLB, parser)
+]]>
+</listbox>
+
+<p>
+
+<listbox>
+<![CDATA[
+ createChoices(names(statistics),
+                 function(val) {
+                               curStatistic <<- statistics[ val ] 
+                               showDist(curDist, curSampleSize, curStatistic, whichDev = distDevice)
+                 }, parser)
+]]>
+</listbox>
+
+
+
+<p>
+<Rdevice name="distDevice">
+    showDist(curDist, whichDev = NULL)
+</Rdevice>
+
+<p>
+
+</body> </html>

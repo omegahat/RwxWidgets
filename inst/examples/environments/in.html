@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Embedded Device</title>
+</head>
+
+<body> 
+
+Note the CDATA to protect the &lt;&lt;-
+The CDATA is not stripped away by the parser
+or handled specially except for to escape the characters.
+So the GetContent() call returns the CDATA markers
+but now there is a parameter for removing it (very simple-minded
+however, but will work in most practical cases)
+
+<init>
+<![CDATA[
+choices <<- c('Normal','Exponential','Uniform','Beta')
+curDist <<- "Normal"
+]]>
+</init>
+
+
+Note that I have enclosed the code within { }.
+And one might also put ; at the end of each expression.
+We used to have to do this for SNetscape. This HTML and R parser
+interaction doesn't seem to require it.
+
+<p>
+It is not obvious we need the attribute choices here
+and so it is just confusing. An attribute name being
+the same as its value and the same as the R variable
+name leads to great ambiguity.  And in fact, 
+the reference in the code to the choices variable
+will find the variable defined above assuming we have the
+correct environment for the evaluation.
+
+<p>
+Lastly, where is distDevice ever defined?
+<listbox  choices="choices">
+   curDist = choices[ listbox_value ] 
+   showDist(curDist, whichDev = distDevice)
+</listbox>
+
+<p>
+<Rdevice name="distDevice">
+    showDist(curDist, whichDev = NULL)
+</Rdevice>
+
+<p>
+
+</body> </html>

@@ -1,0 +1,2 @@
+target:
+	R CMD COMPILE RwxBindings.cpp

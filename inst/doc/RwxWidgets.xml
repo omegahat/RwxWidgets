@@ -1,0 +1,781 @@
+<article xmlns:r="http://www.r-project.org"
+         xmlns:cpp="http://www.cplusplus.org">
+
+<section>
+<title>An overview of the RwxWidgets packages</title>
+
+The RwxWidgets package is an interface from R to the different
+elements in the wxWidgets library.  wxWidgets is a
+portable/cross-platform GUI toolkit for developing sophisticated,
+modern graphical interfaces in a way that appears native on each
+platform it runs.  It is developed in C++ and consists of numerous C++
+classes representing the GUI elements or "widgets", along with
+facilities for numerous other computational details, e.g. accessing
+the file system, compressed archives, internationalization, threads,
+and so on.  We don't need to use all of these from within R as we have
+some of these already and are not interested quite yet in threads (but
+that's on the way), etc. We are interested in the GUI facilities.
+
+<para/>
+
+The interface between R and wxWidgets is being generated
+programmatically, i.e. by the computer, thanks to some meta-computing
+that reads the wxWidgets code and generates the necessary wrapper
+functions for R and C/C++.  Importantly, this gives us a
+deterministic, highly prescribed way to map from a wxWidgets class and
+method to the corresponding R function.
+Before we explain that in detail, lets spend a moment understanding 
+the basics of C++ in the context of wxWidgets.
+This will help us make sense of both the R interface
+and also the wxWidgets documentation.
+
+<para/>
+
+Let's consider a button widget. This is something you all know about
+from the Web, Microsof Word, etc.  The button appears on the screen
+somewhere, e.g. in a toolbar or within a Web page form .  We click on
+the button and something happens, e.g.  a print dialog comes up for
+the Word document, or the form is submitted and we get a new Web page.
+
+<para/>
+The button is clearly a widget or GUI component/control.  And there
+are many other types of controls such as a checkbox, a radio button, a
+list box providing a selection of one of several different elements, a
+text area, an HTML display and so on.  You can see the different
+widgets <ulink
+url="http://www.wxwidgets.org/manuals/2.6.3/wx_classesbycat.html#classesbycat">organized
+by category</ulink>.  
+Now, all of these are quite different, but they share some common characteristics
+such as being visible in a top-level window.
+They are all GUI elements and we want to exploit this commonality.
+C++ gives us a way to do this by having general classes which other class can inherit from
+to define more specific things.
+For example, we all of the GUI elements in wxWidgets are actually
+regular wxWindow objects which have methods for showing and hiding themselves,
+asking for the amount of space they need to be displayed, and so on.
+A button is different from a text area, but they do share this basic window-like
+characteristic. And so both wxButton and wxTextCtrl are C++ classes that
+are derived from the more general class wxWindow.
+
+<para/>
+Each class provides a collection of methods that one can call/invoke
+on a particular object.  For example, wxWindow provides
+both Show() and Hide() as methods.
+A wxButton has both SetLabel() and GetLabel().
+And wxTextCtrl provides GetValue() and SetValue().
+
+<para/>
+Because the wxButton class is derived from the wxWindow class, we can
+consider an instance of wxButton - i.e. an actual button we created -
+as a wxWindow object also. It is both a wxButton and a wxWindow at the
+same time just as you are an R user and a reader of this document at
+the same time.  And because a button is a wxWindow, then we can call
+its Show() or Hide() methods without any extra work in the same way
+that we can call the GetLabel() or SetLabel().
+
+<para/>
+A button is not a wxTextCtrl and so it doesn't have a GetValue()
+method we can call. 
+
+<para/>
+You will find that GUI elements in wxWidgets are often derived from
+several classes in succession.  For example, wxButton is actually
+derived from a class named wxControl, and wxControl is itself derived
+from wxWindow.  And wxWindow is an extension or specialization of the
+wxEvtHandler which allows an object to receive and process events such
+as clicks, move movements, keyboard activity, etc.
+And finally, wxEvtHandler extends the basic wxObject which is
+the top-level, most general class in the wxWidgets class hierarchy.
+And so a wxButton can be considered an instance of any of these
+classes and we can call any of the methods that these classes
+provide on the button.
+
+<para/>
+
+This inheritance of methods across all the ancestor classes,
+e.g. wxControl, wxWindow, wxEvtHandler and wxObject means we have more
+things we can do with a wxButton instance than are listed on the help
+page for wxButton alone.  It also means it is a little more complex to
+find out what methods are available.  First, one has to find out what
+are the ancestor classes?  Then, one has to look through the help
+pages for each of those looking for the available methods and what
+they do?  Fortunately, on each of the wxWidgets class documentation
+pages, there is a section near the top named "Derived from" which
+provides a list of the ancestor classes (in most-specific to
+least-specific order).  You can click on these and jump straight to
+the documentation for that class and look at its methods.
+
+<para/>
+The methods for each class are listed further down the help page
+under the section titled "Members".
+They are listed as 
+<emphasis>className::methodName</emphasis>,
+e.g.
+wxButton::GetLabel
+You can read this as being the method named GetLabel
+within the class wxButton.
+
+<para/>
+In almost all cases, there will be what are termed constructor and
+destructor methods at the top of the list.  A constructor is used to
+create an instance of the given class and is identified in the
+documentation as <emphasis>className::className</emphasis>,
+e.g. wxButton::wxButton.  There may be several different constructors
+that are different in the number and types of the parameters they
+accept. This means we can create an object of the class in different
+ways, and we can select the one that is most convenient given the inputs
+we have available.
+<para/>
+The destructor is identified as the method
+<emphasis>className::~className</emphasis>,
+i.e. with a ~ preceeding the class name on the right hand side of the ::.
+In R, we will never be interested in this, so ignore it!
+
+<para/>
+
+All the other methods are of potential interest to us and you can
+click on them and see what types of inputs they accept.  Like the
+constructor, a single method listed in the "Members" list may actually
+turn out to correspond to several methods of the same name that take
+different inputs. This is called polymorphism.  For the most part,
+R will take care of figuring out which method to use based on the arguments
+you call it with.
+
+<para/>
+
+At this point, you can actually work your way through the wxWidgets
+documentation and get the big picture and determine what widgets you
+might want to use, and what methods they have available to you that
+you want to access.  And we haven't even started R yet.
+Another  approach is to start R and ask for the
+ancestor classes of a particular wxWidget class
+using  the function
+<r:func>getWxClassInfo</r:func>.
+For example, to find out what classes wxTextCtrl is derived from,
+we can use the command
+<r:code>
+getWxClassInfo("wxTextCtrl")
+<r:output>
+[1] "wxTextCtrl"   "wxControl"    "wxWindow"     "wxWindowBase" "wxEvtHandler"
+[6] "wxObject"    
+</r:output>
+</r:code>
+So we see that wxButton and wxTextCtrl are very similar in their class
+inheritance, being derived from the same wxControl parent class.
+
+<para/>
+Rather than working through the different class individually 
+to find the methods, we can use <r:func>getWxMethods</r:func>
+to find all the available methods in the RwxWidgets for a particular class,
+e.g.
+<r:code>
+getWxMethods("wxTextCtrl")
+<r:output>
+ [1] "wxObject_AddCallback"        "wxTextCtrl_AppendText"      
+ [3] "wxTextCtrl_Clear"            "wxTextCtrl_GetNumberOfLines"
+ [5] "wxTextCtrl_GetValue"         "wxTextCtrl_IsMultiLine"     
+ [7] "wxTextCtrl_LoadFile"         "wxTextCtrl_SetEditable"     
+ [9] "wxTextCtrl_SetValue"         "wxWindow_Fit"               
+[11] "wxWindow_GetId"              "wxWindow_SetFont"           
+[13] "wxWindow_SetSizer"           "wxWindow_SetSizerAndFit"    
+[15] "wxWindow_Show"              
+</r:output>
+</r:code>
+(Note that the values listed here are not complete as we ran this command
+before the entire collection of methods were automatically generated.)
+
+<para/>
+
+There are just a few last general piece that you need 
+to understand the connection between wxWidgets documentation and the 
+RwxWidgets interface.
+
+<para/>
+The first of these is how to call a method for a particular
+wxWidgets object in R.
+Suppose we want to create a wxButton in R.
+The constructor function in R is simply called
+<r:func>wxButton</r:func>.
+This is just the class name and we don't need the class
+name followed by the method name like in the constructor
+documentation since this is unambiguous in R.
+So, we can call the constructor method as 
+<r:code>
+btn = wxButton(....)
+</r:code>
+
+where we have to fill in the ....
+according to the parameters listed in the constructor method
+for wxButton in the wxWidgets documentation.
+So let's take a look at that:
+<cpp:code>
+<![CDATA[
+wxButton(wxWindow* parent, wxWindowID id, const wxString& label = wxEmptyString, 
+         const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, 
+         long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = "button")
+]]>
+</cpp:code>
+This is a C++ declaration and is similar to R
+but also has some information about the types of the parameters.
+The first parameter is called parent and must be an instance of
+the wxWindow class. Since we know all the wxWidget GUI elements
+are derived from wxWindow, this means we simply have to have
+another GUI element which will act as the parent and contain
+this new button.  
+The id parameter is of type wxWindowID. What's that?
+That is a fancy word for "potentially big integer",
+and in almost all simple cases in R, we will use
+the value <r:var>wxID_ANY</r:var> which is simply
+-1. What does this mean? It tells wxWidgets to make up a unique identifier for the newly created button
+and that we don't care. If we did care, we could make up an identifier ourselves and pass that value.
+But generally we don't bother.
+
+<para/>
+Note that the next parameter, label, has a default value
+much like in R, i.e 
+<cpp:expr>wxString label = wxEmptyString</cpp:expr>.
+This means that we don't have to provide a value for this parameter,
+and indeed any of the ones after this.  But, in R, we can
+provide values by naming the parameter of interest.
+And in this case, we probably want to put some text on the button
+such as "Click Me".
+You might guess that a wxString corresponds to a simple string in R,
+i.e. a character vector with just one element. You would be correct.
+So we can now create a button with the R command
+<r:code>
+btn = wxButton( myWindow, wxID_ANY, "Click Me")
+</r:code>
+The <r:var>myWindow</r:var> variable is assumed to have been created
+earlier and is often a wxFrame or some other container
+for one or more GUI elements.
+
+<para/>
+The R variable <r:var>btn</r:var> holds the newly created
+wxButton instance and we can call methods on it
+and use it as part of a bigger GUI.
+It is a funny object in R as it is a reference to an internal
+C++ object. For almost all cases in R, we don't care to look at its value,
+but simply pass it to method calls.
+
+<para/>
+Before we finish with the constructor, let's look at an important
+parameter that is used in almost all GUI elements in wxWidgets.
+This is the style parameter. The default is 0 and we don't have to specify
+a value for it. But often times,  we do.
+In the case of a button, for example, we may want the label to be vertically aligned
+at the top of the button, for some reason, rather than in the centre.
+We use the style parameter to tell the button this, but how?
+Again, lets look at the documentation for wxButton and, in particular,
+the section named "Window styles".
+Most class pages have such a style section and each lists 
+on the left hand-side of the table the names of 
+R variables used to identify the style or setting of interest
+and an explanation on the right hand side.
+For wxButton, we have wxBU_LEFT, wxBU_RIGHT, wxBU_TOP, wxBU_BOTTOM,
+wxEXACT_FIT and wxNO_BORDER.
+We will want the wxBU_TOP and so we can use this in our call to create the
+button as
+<r:code>
+btn = wxButton( myWindow, wxID_ANY, "Click Me", style = wxBU_TOP)
+</r:code>
+
+<para/>
+But what if we wanted to have the label be left justified as well
+as aligned at the top?
+We will have to combine both wxBU_LEFT and wxBU_TOP.
+We can do this as
+<r:code>
+btn = wxButton( myWindow, wxID_ANY, "Click Me", style = c(wxBU_TOP, wxBU_LEFT))
+</r:code>
+Some styles are mutually exclusive, e.g. wxBU_LEFT and wxBU_RIGHT.
+Combining these does not mean centered!
+
+<para/>
+In the complete version of RwxWidgets (i.e. the full automated bindings),
+we can also use 
+<r:expr>
+  style = wxBU_TOP | wxBU_LEFT
+</r:expr>
+This is the same as in the C/C++ code and may be easier for C++ programmers
+coming to R, or for mimicing code you see for wxWidgets written in R. 
+But both forms - using a | b or c(a, b) - give identical results.
+
+
+<para/>
+The final aspect of the interface that is important to know about is 
+how we call methods other than the constructor functions for different classes.
+For example, we have a wxButton instance.
+How do we call the SetLabel() method?
+Because the method is part of wxButton and not any of its ancestor classes
+(which we know because it is listed in the wxButton help page), 
+we can use 
+<r:code>
+wxButton_SetLabel(btn, "A different label")
+</r:code>
+The help for the SetLabel() method suggests it only takes one argument,
+the new label. But of course, we have to call it for the particular
+button of interest. So in R, we need to specify the first
+argument as the object whose method is to be called, and the the parameters.
+
+<para/>
+Note that the name of the R function is simply
+the name of the class followed by a _, followed by 
+the name of the method, e.g.
+wxButton_SetLabel.
+
+<para/>
+It may be simpler  and more in keeping with wxWidgets example code and
+the C++ interface to use
+<r:code>
+btn$SetLabel("A different label")
+</r:code>
+This explicitly indicates "call the method SetLabel in the object btn
+with the one argument 'A different label'".
+
+<para/>
+Now, what about the Show() method for wxButton that is inherited from
+the wxWindow ancestor class.
+That is not particular to wxButton since it is in wxWindow.
+So 
+<r:code>
+wxButton_Show(btn)  # wrong!
+</r:code>
+will not work.
+There is no such R function in the <r:pkg>RwxWidgets</r:pkg> package.
+Rather, there is 
+a function named <r:func>wxWindow_Show</r:func> since wxWindow is the
+class which defines the function in C++!  This is getting potentially
+confusing. But the good news is that if we were to use the $ syntax,
+as in
+<r:code>
+btn$Show()
+</r:code>
+then we don't have to worry about what C++ class defined the method. R
+will find the appropriate function and invoke that for us.  So the
+<r:expr>obj$method(...)</r:expr> form is actually easier.  (It is
+slightly slower at present, but may also end up being faster in the
+long term as we can "compile" the set of completions as we do in 
+the SWinTypeLibs and RDCOMClient automated interfaces.)
+
+<para/>
+The $ syntax follows a very simple rule relative to the 
+wxWidgets documentation.
+It is 
+<r:expr>obj$method(parameter1, parameter2, ...)</r:expr>
+and 'method' is the name of the C++ method that is given
+after the :: in the wxWidgets document.
+
+<para/>
+At this point, you should have enough information to read
+the examples and even create objects and call their methods yourself.
+
+</section>
+
+
+<section>
+<title>Creating a GUI</title> 
+
+There are several different options and
+aspects related to creating a GUI using <r:pkg>RwxWidgets</r:pkg>.  It
+is generally very helpful to separate out the two steps that a)
+physically create the GUI display and arrange the GUI elements, and b)
+establish the actions that are invoked by user interaction, e.g. what
+happens when the user clicks a button, etc.  The separation is useful
+from an user interface design perspective, but also for separating the
+actions from the GUI itself and having as few dependencies to what
+happens and the particular layout. And these are important.
+
+<para/>
+In addition to creating the code in R, we also have to consider
+how we can get things started, i.e. how we run the code
+to create the GUI.
+There are two approaches to this. (Only the application approach works on
+the Mac for the immediate term.)
+
+<section>
+<title>Running the GUI code</title>
+<emphasis>In the near(ish) future, we will either connect the wxWidgets
+event loop to R's or, more ideally, provide a mechanism to embed R within 
+wxWidget's event loop.</emphasis>
+In the meantime, we tend to run a wxWidgets GUI in R
+that blocks the R prompt. 
+Only when we kill the GUI does the prompt return.
+On UNIX, we can run another GUI after this if we
+are creating the GUIs directly.
+Alternatively, if we are using a wxApp class to run an application,
+as we currently have to on the Mac, then we can only run one GUI
+and must restart R to run another, or a second instance of the first one even.
+This is klunk, but will be solved.
+
+
+<para/>
+Let's suppose that we are on UNIX.
+Then, when we load the RwxWidgets package, we can immediately
+initialize the wxWidgets library and start creating windows.
+The loading and initialization is done with the R commands
+<r:code>
+library(RwxWidgets)
+wxInit()
+</r:code>
+Note that you really have to call <r:func>wxInit</r:func>
+before creating any GUI elements. Otherwise, R will
+probably crash.
+
+<para/>
+Now that we have things set up, we can go about creating GUI
+components.  (See <ulink
+url="http://www.omegahat.org/RwxWidgets/examples/noapp.R">the noapp.R
+example</ulink> for an example.)
+It is important to understand that while we can create a GUI,
+nothing really happens until we i) show the GUI
+by calling the Show() method on the top-level window,
+and b) run the wxWidgets event loop which causes
+it to process all the different events
+such as user clicks and also the creation, displaying,
+resizing and drawing of the widgets and so the top-level
+window itself.
+
+<para/>
+On UNIX, we can run an event loop directly by first
+creating it and then telling it to process
+all pending and subsequent events.
+We do this with the commands
+<r:code>
+eloop = wxEventLoop()
+wxEventLoop_Run(eloop)
+</r:code>
+
+Let's look at a very simple example.
+We start by creating the GUI
+which is a simple top-level frame that will contain a single
+button. When we click on the button, it simply writes
+a message on the R console.
+<r:code>
+f = RFrame()
+btn = wxButton(f, wxID_ANY, "Click me")
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, function(ev) cat("Button was clicked\n"))
+f$Show()
+</r:code>
+We end by telling the wxFrame to show itself.
+
+<para/>
+If  you do this, nothing will happen and you can feel understandably aggrieved.
+But we can easily get the instant gratification we want by running the event loop. 
+The R commands
+<r:code>
+eloop = wxEventLoop()
+wxEventLoop_Run(eloop)
+</r:code>
+do exactly this and will bring up the GUI and process all the
+events. We will not be able to return to the R prompt and issue R
+commands until the GUI is destroyed.  But the GUI will run just fine.
+(If we had a component in the GUI that allowed us to input R commands
+and then parsed and evaluated that input, we could execute arbitrary R
+commands. So we would have our own R console.)
+
+<para/>
+What happens if you destroy the top-level window by clicking
+on the "Destroy window" button on the frame of the top-level window of the GUI?
+The answer is that the window will disappear, as expected, but the
+event loop will continue to run.
+What we need to do is arrange things so that when the user 
+dismisses the window that we also break out of the event loop.
+If we are using the function <r:func>RFrame</r:func>
+to create the top-level window, we can pass a
+function as the value of the 
+<r:arg>OnQuit</r:arg>
+parameter for that function.
+This will be called when the window is destroyed
+and we can terminate the currently active event loop
+within this function.
+So, we modify our example above just slightly
+to be
+<r:code>
+closeWindow =
+function(...) {  
+  f$Show(FALSE) 
+  wxEventLoop_Exit(wxEventLoop_GetActive())
+}
+
+f = RFrame(OnQuit = closeWindow)
+btn = wxButton(f, wxID_ANY, "Click me")
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, function(ev) cat("Button was clicked\n"))
+f$Show()
+</r:code>
+
+Then, we can run the event loop as before and when we kill the window,
+we will get the R prompt back again and can continue with other
+computations or even create a new GUI and run another event loop.
+We have specified a function that is invoked when the window
+is destroyed by the user. And that takes care of
+hiding the window so it is no longer visible and then
+terminating the active event loop.  
+The rest is the same and we run the event loop as before,
+e.g.
+<r:code>
+wxEventLoop_Run()
+</r:code>
+and allow that function to create its own event loop
+via its default value for the <r:arg>loop</r:arg> parameter.
+
+</section>
+
+<section>
+<title>Connecting user actions, callbacks and Events</title>
+The next thing you need to know in the creation of a GUI is how to
+connect the actions, i.e. the R commands and functions, with the
+components and particular user actions such as clicking a button,
+selecting an element in a list box, highlighting a cell in a data
+grid, etc.  The mechanism by which we make these connections is
+reasonably simple and very consistent.  We have already seen it done
+implicitly when we provided the function for the <r:arg>OnQuit</r:arg>
+of the <r:func>RFrame</r:func> function in the example above.  If you
+take a look at the code for <r:func>RFrame</r:func>, you will see how
+it is done.  And we have already done this explicitly in our example
+for handling button clicks.
+
+<para/>
+From within R, we identify the R variable that represents the
+wxWidgets object in which we are interested. That is the object in
+which the event will occur.  In our example, we had
+<r:var>btn</r:var>.  The next thing we need is to identify the
+particular event of interest and find its "code" or identifier.  To do
+this, we go back to the documentation for the particular wxWidgets
+class.  Let's look at the page for wxButton and in particular, the
+section named "Event handling".  Like the styles section, this is a
+table with two columns. For use in R, we are interested in the second
+column.  For wxButton, this is
+<literallayout>
+Process a wxEVT_COMMAND_BUTTON_CLICKED event, when the button is clicked.
+</literallayout>
+And this tells us about the event we want.  And it also tells us how
+to identify the event; we use
+<r:var>wxEVT_COMMAND_BUTTON_CLICKED</r:var>.  Along with the object of
+interest, that is next input for specifying an event handler. And the
+last one is an R function that is to be invoked when the event
+actually occurs.  A callback or event function should take one
+argument which will be passed to it when the event occurs and the
+function is invoked.
+This argument will generally be a wxEvent object, but 
+it will be of a class specific to the type of event.
+You may not be interested in this argument, but your function
+still has to accept it.
+In our example, 
+<r:code>
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, function(ev) cat("Button was clicked\n"))
+</r:code>
+we didn't use the event information.
+However, it does contain useful content and methods.
+For example, we can get the object in which the event occurred
+with 
+<r:code>
+wxEvent_GetEventObject()
+</r:code>
+You might think this is of no value since we associated the callback function
+with a particular button object so we should know what the source of
+the event was.
+Well, there are two problems with that. The first is that the function
+may not be able to "see" the R variable holding the reference to the
+wxWidgets object.  In other words, that variable may not be in the scope of the
+R function.  And the second reason this can be useful is that we can use
+the same function as a callback for several different wxWidgets objects
+and figure out what to do in the function based on the object itself.
+
+<para/>
+The event objects have other useful methods which we do need.
+For example, when clicking on a button or a canvas, we may need
+the coordinates of the mouse pointer at the time of the event,
+i.e. the x and y locations of the mouse in the window.
+When we have a wxMouseEvent object, then we can call its methods
+GetX() and GetY() to find these.
+And we can ask which buttons were down, what keys were pressed
+during the event, etc.
+
+<para/>
+When we handle an event, the callback can control whether other
+default behaviors are to take place after this callback has been
+completed or not.  By default, they do not.  But if we call the Skip()
+method on the event object passed to the callback with <r:true/> as
+the only argument, then this "controls whether additional event
+handlers bound to this event will be called after the current event
+handler returns".  The value <r:true/> says to the event system to go
+ahead and look for other event handlers for this event.  The default
+is not to look for these and our event handler will be the only called
+for this event.  So Skip() can be very important.
+
+<para/>
+So the event is useful information for parameterizing a particular
+call to our callback function.
+In R, we can get additional values along with the event passed to us
+in the call to our callback function. 
+We can pass additional arguments to 
+<r:func>wxObject_AddCallback</r:func> and
+these are passed to each call to our event handling function.
+For example, suppose we have two buttons in a GUI
+and we have a single callback function
+that can work for both buttons by figuring out what
+to do based on the label in the particular button
+in which the event occurred.
+We could add the code to compute the label
+as
+<r:code>
+label = ev$GetEventObject()$GetLabel()
+</r:code>
+Another possibly simpler approach 
+is to specify the label when we add the event handler
+for each button.
+For example,
+<r:code>
+cb = 
+function(ev, label) {
+ switch(label,
+        A = cat("First button\n"),
+        B = cat("Other button\n"))
+}
+btn = wxButton(parent, wxID_ANY, "One")
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, cb, "A")
+btn = wxButton(parent, wxID_ANY, "Two")
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, cb, "B")
+</r:code>
+The callback function will be called with two arguments,
+the event and the value "A" for the first button
+and "B" for the second button.
+
+<para/>
+We can add any number of additional arguments.
+
+<para/>
+
+We should note that one needs closures if we want
+to have access to values that change across calls
+to our functions. The values that we provide
+in AddCallback are copied and never updated
+even if they refer to variables that are changed.
+So, in the code,
+<r:code>
+x = "A"
+btn = wxButton(parent, wxID_ANY, "One")
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, cb, x)
+
+x = "A new string"
+</r:code>
+the subsequent change to the variable <r:var>x</r:var>
+does not change what will be passed to the callback function
+which will be "A".
+
+<para/>
+That said it can be very convenient to pass 
+widget objects this way.
+Suppose we want the callback function
+for a button to clear the contents of a 
+wxTextCtrl widget which we have created and assigned
+to, say, <r:var>text</r:var>.
+We could then arrange to pass this to our callback
+function for the button as
+<r:code>
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED,
+                function(ev, w) {
+                  w$SetValue("")
+                }, text)
+</r:code>
+There are various other ways to do this using
+<r:func>substitute</r:func> and closures. But this is
+reasonably simple to understand.
+<para/>
+And we note that even though the widget referenced
+by <r:var>text</r:var> may change, its address will not and so the
+value of <r:var>text</r:var> in R doesn't change.
+
+</section>
+
+</section>
+
+
+
+<section>
+<title>The wxApp Event Loop</title>
+wxWidgets is a C++ library and the typical way it is used
+is to create a stand-alone application or executable
+that, when run, brings up a GUI and when the user quits,
+the application terminates.
+So even though there may be multiple windows during the 
+life of the application, there is only one "GUI" and one
+application.
+And wxWidgets and <r:pkg>RwxWidgets</r:pkg> makes this relativel easy for us.
+We can use the function <r:func>RApp</r:func>
+to create a wxApp object that has a "method" or argument
+to create the initial GUI window when it is needed.
+We can call the <r:func>RApp</r:func>
+function and tell it to run the event loop immediately
+and so essentially become a stand-alone application in R.
+When we quit from this GUI, we will return to the R prompt.
+Unfortunately, we (currently) will not be able to create another
+application after that within this R session.
+<para/>
+This mechanism runs on all platforms whereas the approach
+of explicitly running an event loop we discussed above
+only works on UNIX at present.
+This will be resolved in the future, but for the moment
+the <r:func>RApp</r:func> is quite natural.
+We use it in most of our examples and also in the
+<r:func>htmlViewer</r:func> function.
+
+<para/>
+
+So, if you want to run a single wxWidgets application or GUI within the R
+session and then quit R (or continue the session but not use wxWidgets
+again during the session) you can use the <r:func>RApp</r:func> function.  You give it
+a function that is called when the application is being initialized by
+wxWidgets and this function is supposed to create the 
+initial GUI display with callbacks.
+The function is called with a single argument which is the 
+wxApp object.
+This may have some information you want to use in the
+function such as command line arguments, or to create a logging facility
+for messages, etc.
+The function creates the GUI and shows it and then returns
+the value <r:true/> if we can run the event loop at this point.
+
+<para/>
+We can implement our simple example with the button above using this approach.
+We create the initialization function
+<r:code>
+init = 
+function(app) {
+  f = RFrame()
+  btn = wxButton(f, wxID_ANY, "Click me")
+  btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, function(ev) cat("Button was clicked\n"))
+  f$Show()
+
+  TRUE
+}
+</r:code>
+Next, we call the <r:func>RApp</r:func>
+function as
+<r:code>
+RApp(OnInit = init, run = TRUE)
+</r:code>
+and then this enters the event loop and will 
+automatically return to the R prompt
+when the application is terminated.
+We don't have to do anything with a callback
+for the OnQuit argument, etc.
+
+<para/>
+Note that you will get an error at the end of the application
+if you have also called
+<r:func>wxInit</r:func>.
+So don't do that!
+
+<para/>
+
+There is a reasonably simple GUI available from the R package
+<r:pkg>RwxGUI</r:pkg> which provides a command line area for entering
+R commands and an HTML area for displaying the results.  This is an
+application, but one can continue to give R commands during the
+lifetime of this application through the command line area.  And one
+can then create new windows, etc. without having to worry about the
+event loop.
+
+</section>
+</article>

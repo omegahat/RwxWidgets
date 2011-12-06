@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+</head>
+
+<body>
+<h1></h1>
+
+<table border="1">
+ <tr>
+  <th>File</th><th>Linux (tigger)</th>
+ </tr>
+<tr><th>app.R</th><th>Ok</th></tr>
+<tr><th>buttons.R</th><th>Ok</th></tr>
+</table>
+
+
+<dl>
+  <dt>
+  <li> app.R 
+  <dd>  Functions. Note that it only creates an empty frame and allows you to kill that frame
+    with the window manager buttons on the frame.
+
+  <dt>
+  <li> buttons.R
+  <dd>  Functions
+
+  <dt>
+  <li> CLT.R
+  <dd> Seg faults on the graphics device.
+
+  <dt>
+  <li> dynamic.R
+      
+  <dd> Fails<br>
+<pre>
+C symbol name "R_wxObject_new" not in load table
+</pre>
+
+  <dt>
+  <li> eventLoop.R
+  <dd> Seg faults after we break from the loop and return to R.
+       The app is gone.
+      Are we entitle to create two apps.
+      Try this in pure C++ code, i.e. outside of R.
+
+  <dt>
+  <li> genericHTMLElements.R
+  <dd> Ok.
+
+  <p>
+      Jasper:  UTF issues, but did the parsing, etc.
+
+  <p> 
+
+
+  <dt>
+  <li> grid1.R
+  <dd> What is wxWANTS_CHARS doing in the call to wxGrid.
+
+  <dt>
+  <li> grid.R
+  <dd> Ok.
+
+  <dt>
+  <li> htmlparser1.R
+  <dd> Okay, jasper.
+
+  <dt>
+  <li> htmlparser.R
+  <dd> Okay.     Jasper too.
+  <dt>
+  <li> html.R
+  <dd> Bad images. Jasper same.
+
+
+  <dt>
+  <li> noapp.R
+  <dd>  Fine.
+      <p> Jasper okay.
+  <dt>
+  <li> notebook.R
+  <dd> Sizing issues with the tabs (need to make the window 450 high
+      or resize manually) and the text windows don't resize.
+
+
+      <p> Jasper okay.
+  <dt>
+  <li> radio.R
+  <dd>
+
+  <dt>
+  <li> testform.R
+  <dd> Fine.
+      
+</dl>
+
+source_109.R is a support file.
+
+<hr>
+<address><a href="http://www.stat.ucdavis.edu/~duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@wald.ucdavis.edu>&lt;duncan@wald.ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Sat Mar 10 13:55:43 PST 2007
+<!-- hhmts end -->
+</body> </html>

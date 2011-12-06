@@ -1,0 +1,9 @@
+WX_CONFIG=@WX_CONFIG@
+PKG_CONFIG=@PKG_CONFIG@
+
+PKG_CPPFLAGS=-I. $(shell ${WX_CONFIG} --cflags)  @GTK_CFLAGS@ @DEFINES@
+#-DwxUSE_UNICODE=1
+
+PKG_LIBS=$(shell ${WX_CONFIG} --libs) 
+
+

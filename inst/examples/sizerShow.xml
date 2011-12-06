@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://www.omegahat.org/XSL/Rstyle.xsl" ?>
+
+<article xmlns:r="http://www.r-project.org">
+
+<section>
+<title></title>
+<para>
+This example shows how we can have two widgets
+in a wxSizer and switch between which one is displayed.
+This is not limited to two widgets and is generally
+a way we can keep widgets around but not displayed
+and display them at a later time.
+The following screenshots illustrate this.
+<graphic fileref="sizerShowA.jpg"/>
+<graphic fileref="sizerShowB.jpg"/>
+While it may appear that all we have done is change the label on the
+button, in fact these are two separate widgets with labels A and B and
+we are swapping them in and out as we click the Toggle button.
+</para>
+
+<invisible>
+<r:code>
+library(RwxWidgets)
+wxInit()
+</r:code>
+</invisible>
+
+We create a top-level frame and wxBoxSizer
+to manage its children.
+<r:code>
+f = RFrame("Sizer Show Example")
+sz = wxBoxSizer(wxHORIZONTAL)
+</r:code>
+
+<para>
+We create three buttons.  The first is the one we will use to toggle
+the display of the other two.  That is, we will have a callback on the
+button labelled "Toggle" and it will change the currently displayed
+other button from A to B to A and so on.
+<r:code>
+btn = wxButton(f, wxID_ANY, "Toggle")
+sz$Add(btn)
+
+a = wxButton(f, wxID_ANY, "A")
+sz$Add(a, 1, wxEXPAND)
+b = wxButton(f, wxID_ANY, "B")
+sz$Add(b, 1, wxEXPAND)
+b$Show(FALSE)
+</r:code>
+Note that we hid button <r:var>b</r:var>
+so it would not be displayed in the initial 
+view.
+</para>
+
+<para>
+Now we specify the callback for the Toggle button.  If the global
+variable <r:var>ctr</r:var> is <r:true/>, then we hide button
+<r:var>a</r:var> and show button <r:var>b</r:var>. Otherwise, we do
+the opposite.  Note that we are calling the Show method on the sizer
+(not the wxWindow) to display the button of interest.  We hide the
+other button by calling its Show method. These are different Show
+methods: one is for a wxWindow and the other is for a wxSizer.  At the
+end of the hiding and showing steps, we tell the wxSizer to arrange
+its children again via a call Layout.
+<r:code>
+<![CDATA[
+ctr = TRUE
+btn$AddCallback(wxEVT_COMMAND_BUTTON_CLICKED, 
+                 function(ev) {
+                   if(ctr) {
+                     a$Show(FALSE)
+                     sz$Show(b)
+                   } else {
+                     b$Show(FALSE)
+                     sz$Show(a)
+                   }
+                   sz$Layout()
+                   ctr <<- !ctr
+                   TRUE
+                 })
+]]>
+</r:code>
+</para>
+
+<r:code>
+f$SetSizer(sz)
+sz$SetSizeHints(f)
+f$Show()
+</r:code>
+
+<r:code eval='false'>
+wxEventLoop()$Run()
+</r:code>
+</section>
+</article>

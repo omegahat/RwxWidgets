@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://www.omegahat.org/XSL/Rstyle.xsl" ?>
+
+<article xmlns:r='http://www.r-project.org'>   
+<articleinfo>
+<author><firstname>Duncan</firstname><surname>Temple Lang</surname></author>
+</articleinfo>
+
+<section>
+<title>Working with Menus in RwxWidgets</title>
+
+<para>
+We start by loading the RwxWidgets package.
+<r:code>
+library(RwxWidgets)
+wxInit()
+if(!exists("wxNO_BORDER"))
+  wxNO_BORDER = wxBORDER_NONE
+</r:code>
+</para>
+
+<para>
+And then we create a top-level window and 
+set its menu bar. We explicitly create
+the menu bar and then associate it with the frame.
+<r:code>
+f = RFrame("Menu example", size = c(300, 300))
+
+menuBar = wxMenuBar()
+f$SetMenuBar(menuBar)
+</r:code>
+</para>
+
+<para>
+Now we can start creating the actual menus and their contents.
+We start with a simple menu and adding an item
+with the label "Entry 1".
+<r:code>
+menu = wxMenu()
+i = menu$Append(wxID_ANY, "Entry 1")
+</r:code>
+</para>
+<para>
+We can register a callback on an individual item.  Note that we call
+this method on a wxWindow object, e.g. f, rather than on the
+wxMenuItem itself.  The identifier for the event is
+wxEVT_COMMAND_MENU_SELECTED and not wxEVT_MENU as one might glean from
+the documentation.  The C++ header files expand wxEVT_MENU into a call
+involving wxEVT_COMMAND_MENU_SELECTED.  So this is an important case
+where we want to know the event of interest and not the macro used in
+C++ code to identify the event in the event table construction code.
+<r:code>
+# Note that we are adding the callback to f (a wxWindow)
+f$AddCallback(wxEVT_COMMAND_MENU_SELECTED, function(ev) cat("Menu item selected"), objId = i$GetId())
+</r:code>
+</para>
+
+<para>
+Adding the callback on the wxMenuItem causes things to hang.
+<r:code eval="false">
+i$AddCallback(wxEVT_COMMAND_MENU_SELECTED, function(ev) cat("In direct wxMenuItem handler"))
+</r:code>
+</para>
+
+
+<para>
+We add another entry and append this menu to the 
+menu bar. Note that it is the label
+here the is in the menu bar display
+of this menu. It is not the name given
+in the creation of the wxMenu itself.
+That, if specified, is used as an additional
+initial entry in the display of the menu when it is 
+shown.
+<r:code>
+menu$Append(wxID_ANY, "Entry 2")
+menuBar$Append(menu, "A")
+</r:code>
+</para>
+
+<para>
+Now, we add a sub-menu off of this one.
+We create a new menu (with a decorative title item "B") and 
+then add three entries - Red, Green and Blue.
+Then we append this sub-menu to the "parent"
+wxMenu object with which it is associated.
+Note that we are giving the labe "My sub menu" to 
+display on the parent/top-level menu.
+<r:code>
+subMenu = wxMenu("B")
+subMenu$Append(wxID_ANY, "Red")
+subMenu$Append(wxID_ANY, "Blue")
+subMenu$Append(wxID_ANY, "Green")
+menu$Append(wxID_ANY, "My sub menu", subMenu)
+</r:code>
+</para>
+
+<para>
+We can continue to add new items to the <r:var>menu</r:var>
+object. We add a separator to identify a new group of items.
+And then we add a checkbox widget and a radio button widget.
+<r:code>
+menu$AppendSeparator()
+menu$AppendCheckItem(wxID_ANY, "A Check box")
+menu$AppendRadioItem(wxID_ANY, "My Radio button")
+</r:code>
+</para>
+
+<para>
+We now move on to creating a separate menu which we 
+add to the menu bar under the label "City".
+<r:code>
+menu = wxMenu("European Cities")
+menuBar$Append(menu, "City")
+</r:code>
+</para>
+
+<para>
+We create the items in this menu by looping
+over the names of the cities in the 
+<r:var>eurodist</r:var> object available 
+in R.
+Note that in this case, we explicitly control the
+id values used when creating the wxMenuItems
+rather than using wxID_ANY. 
+We start these at 401 and have 402, 403, ...
+This allows us to refer to these items by id
+and by id range which is convenient when
+specifying events.
+<r:code>
+cityNames = attr(eurodist, "Labels")
+sapply(seq(along = cityNames),
+         function(i) menu$Append(400 + i , cityNames[i]))
+</r:code>
+And we specify a single callback for all of these items
+using the regular wxObject_AddCallback function
+but specifying two values for objId.
+These values give the first and last window id
+to be included in this callback specification
+and includes all the values within this close range, i.e.
+401, 402, ..., 426.
+(Again, we invoke the callback on the wxWindow
+and not a wxMenuItem.)
+<r:code>
+f$AddCallback(wxEVT_COMMAND_MENU_SELECTED,
+              objId = c(401, 400 + length(cityNames)),
+              function(ev) {
+                   i = ev$GetId()
+                   cat("Selected city",  i, cityNames[i - 400], "\n")
+                   print(ev$GetString())
+              })
+</r:code>
+</para>
+
+<para>
+Finally, we add a toolbar and put some controls/tools on it.
+We use JPEG files from the R distribution and we create
+a normal, check and radio  item.
+<r:code>
+tbar = f$CreateToolBar()
+
+imageNames = list.files(paste(Sys.getenv("R_HOME"), "doc", "html", sep = .Platform$file.sep), 
+                         "(left|right|up)\\.jpg$", full.names = TRUE)
+
+type = c(wxITEM_NORMAL, wxITEM_CHECK, wxITEM_RADIO)
+start = 123L
+ids = sapply(seq(along = imageNames),
+             function(i)
+         	   tbar$AddTool(start + i, 
+                                gsub("\\.jpg$", "", basename(imageNames[i])), 
+                                wxBitmap(imageNames[i], wxBITMAP_TYPE_JPEG), 
+                                kind = type[i]))
+</r:code>
+
+We then register for events on any of these tools.
+Note that in the documentation  it says to pass the id of the tool
+of interest. We want to have a single function that catches
+the events for all the buttons. We could loop over the buttons and put the 
+callback on each one separately. But we can also specify a range of
+widget ids in a single call to wxEvtHandler_AddCallback.
+That is why we controlled the creation of the tools
+by specifying the id explicitly as  <r:expr eval="false">start + i</r:expr>.
+Then we can specify the range as 
+<r:code>
+tbar$AddCallback(wxEVT_COMMAND_MENU_SELECTED, function(ev, ...) print(ev), objId = c(start + 1L, start + 1L + length(type)))
+</r:code>
+
+We must realize the toolbar after adding the tools.
+<r:code>
+tbar$Realize()
+</r:code>
+</para>
+
+
+<para>
+And we show the top-level window 
+<r:code>
+f$Show()
+</r:code>
+If <r:func>wxInit</r:func> was used,
+we should have the event loop connected
+to R's. It might be prudent to flush the event queue
+with 
+<r:code>
+if(is.load("gdk_flush"))
+ .C("gdk_flush")
+</r:code>
+
+If we are not integrated with R's event loop, we can run our own.
+<r:code eval="false">
+eloop = wxEventLoop()
+eloop$Run()
+</r:code>
+But we do need to ensure that we exit from this
+loop when the window is closed.
+
+
+<invisible>
+<r:code eval="false">
+eloop = wxEventLoop()
+.C("addGtkEventHandler")
+</r:code>
+</invisible>
+</para>
+</section>
+</article>
